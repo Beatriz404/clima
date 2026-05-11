@@ -1,0 +1,240 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(180deg, #e8f3ff 0%, #f6fbff 100%);
+  color: #0b3558;
+}
+
+.cabecera {
+  background: linear-gradient(135deg, #0f5fa8, #1a7bcf);
+  color: white;
+  padding: 1rem 1.5rem;
+}
+
+.cabecera h1 {
+  margin: 0;
+}
+
+.contenedor {
+  display: grid;
+  grid-template-columns: 320px 1fr 420px;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.panel-control,
+.panel-mapa,
+.panel-resultado {
+  background: white;
+  border: 1px solid #c9e1f7;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(14, 66, 110, 0.08);
+  padding: 1rem;
+}
+
+.panel-control label {
+  display: block;
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+}
+
+.panel-control input {
+  width: 100%;
+  padding: 0.55rem;
+  border-radius: 8px;
+  border: 1px solid #8ec0eb;
+  margin-top: 0.25rem;
+}
+
+.botones {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modos-consulta {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+button {
+  background: #1c84dd;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #1067b4;
+}
+
+.modos-consulta button {
+  background: #dbeeff;
+  color: #1e4f78;
+  border: 1px solid #9ec9ee;
+}
+
+.modos-consulta button.activo {
+  background: #1c84dd;
+  color: white;
+  border-color: #1c84dd;
+}
+
+.leyenda-clima {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.leyenda-clima span {
+  background: #eaf5ff;
+  border: 1px solid #c5e0f7;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  width: fit-content;
+  font-size: 0.84rem;
+  color: #174e7b;
+}
+
+#mapa {
+  width: 100%;
+  min-height: 560px;
+  border-radius: 10px;
+}
+
+.salida-panel {
+  background: #eff7ff;
+  border-radius: 10px;
+  padding: 0.75rem;
+  min-height: 560px;
+  overflow: auto;
+}
+
+.mensaje-inicial {
+  margin: 0;
+  color: #2d5e89;
+}
+
+.mensaje-aviso {
+  margin: 0 0 0.75rem 0;
+  color: #8a4b00;
+  background: #fff3dd;
+  border: 1px solid #ffd79c;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.9rem;
+}
+
+.ubicacion {
+  font-size: 0.9rem;
+  color: #20517c;
+  margin-bottom: 0.9rem;
+  padding: 0.6rem;
+  background: #ddefff;
+  border-radius: 8px;
+}
+
+.lista-tarjetas {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.tarjeta-dia {
+  background: white;
+  border: 1px solid #c6def5;
+  border-radius: 10px;
+  padding: 0.65rem;
+}
+
+.tarjeta-dia h3 {
+  margin: 0 0 0.45rem 0;
+  font-size: 0.98rem;
+  color: #0e3f67;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.linea-dato {
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+}
+
+.lista-notificaciones {
+  margin: 0.35rem 0 0.8rem 1rem;
+  padding: 0;
+}
+
+.lista-notificaciones li {
+  margin: 0.25rem 0;
+  color: #0f446f;
+  font-size: 0.92rem;
+}
+
+.grafica {
+  width: 100%;
+  max-height: 240px;
+  background: #ffffff;
+  border: 1px solid #c8e0f5;
+  border-radius: 10px;
+  padding: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.temperatura-grande {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin: 0.2rem 0 0.15rem 0;
+}
+
+.temperatura-grande .etiqueta-temp {
+  font-size: 0.8rem;
+  color: #2c5f8c;
+  background: #e6f3ff;
+  border-radius: 999px;
+  padding: 0.14rem 0.45rem;
+}
+
+.temperatura-grande strong {
+  font-size: 2rem;
+  color: #0a4a78;
+  line-height: 1;
+}
+
+.estado-siembra {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.estado-siembra.apto {
+  background: #d9f7e2;
+  color: #0e7a37;
+}
+
+.estado-siembra.no-apto {
+  background: #ffe4e4;
+  color: #b3261e;
+}
+
+@media (max-width: 1200px) {
+  .contenedor {
+    grid-template-columns: 1fr;
+  }
+
+  #mapa,
+  .salida-panel {
+    min-height: 360px;
+  }
+}
