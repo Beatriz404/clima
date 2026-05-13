@@ -331,7 +331,7 @@
           <strong>Pronóstico:</strong>
           <button id="btn7" class="toggle-btn active" type="button">7 días</button>
           <button id="btn15" class="toggle-btn" type="button">15 días</button>
-          <span id="calcLocation" class="calc-location">Calculado para: 13.7741, -88.0884</span>
+          <span id="calcLocation" class="calc-location">Calculado para: San Salvador (por defecto)</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -370,16 +370,19 @@
       <section class="card map-section">
         <h3 class="map-title">Mapa de referencia de parcela</h3>
         <div id="map"></div>
-        <p class="map-note">Ubicación seleccionable en El Salvador | Altitud de referencia: 650 msnm</p>
-        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.7741, -88.0884</p>
+        <p class="map-note">
+          Por defecto: centro de San Salvador. Puede arrastrar el marcador o hacer clic en el mapa para otra parcela en El Salvador.
+        </p>
+        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
       </section>
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      const BASE_LAT = 13.7741;
-      const BASE_LON = -88.0884;
+      // Punto de referencia por defecto: San Salvador (mapa + ajuste de pronostico vs esta ubicacion).
+      const BASE_LAT = 13.6929;
+      const BASE_LON = -89.2182;
 
       // Patron de 15 dias (dia 1 = hoy del visitante). Las fechas se asignan en el navegador con la fecha local.
       const FORECAST_PATTERN = [
@@ -789,7 +792,8 @@
       function initMap() {
         const lat = BASE_LAT;
         const lon = BASE_LON;
-        const map = L.map("map", { zoomControl: true }).setView([lat, lon], 9);
+        // Zoom algo mayor para ver bien el area metropolitana; el usuario puede alejar o mover el mapa.
+        const map = L.map("map", { zoomControl: true }).setView([lat, lon], 11);
         const selectedPointEl = document.getElementById("selectedPoint");
 
         const elSalvadorBounds = L.latLngBounds(
@@ -840,7 +844,7 @@
         marker.on("dragend", (event) => {
           const { lat: newLat, lng: newLon } = event.target.getLatLng();
           if (!elSalvadorBounds.contains([newLat, newLon])) {
-            updateMarkerInfo(lat, lon);
+            updateMarkerInfo(BASE_LAT, BASE_LON);
             return;
           }
           updateMarkerInfo(newLat, newLon);
