@@ -310,10 +310,8 @@
   <body>
     <main class="layout">
       <section class="card header">
-        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador
-</h1>
-        <p>Plataforma Predictiva con Machine Learning para Agroindustrias
- - El Salvador</p>
+        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
+        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
       </section>
 
       <section class="card today">
@@ -803,7 +801,7 @@
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           marker
-            .bindTooltip(`Parcela seleccionada\\nAltitud aprox: 650 msnm\\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
+            .bindTooltip(`Parcela seleccionada\nAltitud aprox: 650 msnm\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
               direction: "top",
               sticky: true,
             })
