@@ -310,10 +310,8 @@
   <body>
     <main class="layout">
       <section class="card header">
-        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador
-</h1>
-        <p>Plataforma Predictiva con Machine Learning para Agroindustrias
- - El Salvador</p>
+        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
+        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
       </section>
 
       <section class="card today">
@@ -380,11 +378,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      // Punto de referencia por defecto: San Salvador (mapa + ajuste de pronostico vs esta ubicacion).
+      // Punto de referencia por defecto: San Salvador (mapa + ajuste de pronóstico vs esta ubicación).
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
 
-      // Patron de 15 dias (dia 1 = hoy del visitante). Las fechas se asignan en el navegador con la fecha local.
+      // Patrón de 15 días (día 1 = hoy del visitante). Las fechas se asignan en el navegador con la fecha local.
       const FORECAST_PATTERN = [
         { temp: 26.6, rain: 0, humidity: 65, max: 34, min: 19 },
         { temp: 27.1, rain: 0, humidity: 60, max: 34.8, min: 19.4 },
@@ -416,7 +414,7 @@
         return `${y}-${m}-${d}`;
       }
 
-      /** Suma dias a una fecha YYYY-MM-DD en calendario local (cruza meses correctamente). */
+      /** Suma días a una fecha YYYY-MM-DD en calendario local (cruza meses correctamente). */
       function addDaysToISODate(isoDate, dayOffset) {
         const [y, mo, da] = isoDate.split("-").map(Number);
         const dt = new Date(y, mo - 1, da + dayOffset);
@@ -442,7 +440,7 @@
         const latDelta = lat - BASE_LAT;
         const lonDelta = lon - BASE_LON;
 
-        // Ajuste simplificado por ubicacion: representa cambios de microclima dentro del pais.
+        // Ajuste simplificado por ubicación: representa cambios de microclima dentro del país.
         // Se aumenta amplitud para que el cambio sea visible al usuario en diferentes zonas.
         const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
         const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
@@ -470,9 +468,9 @@
       }
 
       function evaluateTrafficLight(day) {
-        // Logica del semaforo:
-        // 1) Rojo si hay condicion critica: lluvia >15mm, temp extrema (<18 o >35) o riesgo alto.
-        // 2) Amarillo si no es rojo y hay precaucion: lluvia 5-15mm o humedad fuera de 50-85%.
+        // Lógica del semáforo:
+        // 1) Rojo si hay condición crítica: lluvia >15mm, temp extrema (<18 o >35) o riesgo alto.
+        // 2) Amarillo si no es rojo y hay precaución: lluvia 5-15mm o humedad fuera de 50-85%.
         // 3) Verde cuando cumple ventana recomendada de siembra.
         const highRisk = day.rain >= 25 || day.humidity >= 90;
         if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
@@ -480,7 +478,7 @@
             color: "red",
             icon: "🔴",
             label: "No sembrar",
-            note: "Riesgo alto por exceso de lluvia o condicion extrema.",
+            note: "Riesgo alto por exceso de lluvia o condición extrema.",
           };
         }
 
@@ -488,8 +486,8 @@
           return {
             color: "yellow",
             icon: "🟡",
-            label: "Precaucion",
-            note: "Monitorear suelo y pronostico antes de sembrar.",
+            label: "Precaución",
+            note: "Monitorear suelo y pronóstico antes de sembrar.",
           };
         }
 
@@ -498,24 +496,24 @@
             color: "green",
             icon: "🟢",
             label: "Recomendada",
-            note: "Ventana optima para labores de siembra.",
+            note: "Ventana óptima para labores de siembra.",
           };
         }
 
         return {
           color: "yellow",
           icon: "🟡",
-          label: "Precaucion",
+          label: "Precaución",
           note: "Condiciones intermedias, revisar humedad del suelo.",
         };
       }
 
       function riskAlerts(day) {
         const alerts = [];
-        if (day.rain === 0) alerts.push({ type: "warn", text: "Alerta de sequia puntual (0 mm)" });
+        if (day.rain === 0) alerts.push({ type: "warn", text: "Alerta de sequía puntual (0 mm)" });
         if (day.rain > 15) alerts.push({ type: "danger", text: "Alerta por exceso de lluvia" });
         if (day.humidity > 85) alerts.push({ type: "warn", text: "Humedad alta: posible riesgo de hongos" });
-        return alerts.length ? alerts : [{ type: "warn", text: "Sin alertas criticas hoy" }];
+        return alerts.length ? alerts : [{ type: "warn", text: "Sin alertas críticas hoy" }];
       }
 
       function formatDateHeading(iso) {
@@ -548,20 +546,20 @@
         const metrics = document.getElementById("todayMetrics");
         metrics.innerHTML = `
           <div class="metric"><div class="label">🌡️ Temp media</div><div class="value">${today.temp.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬆️ Temp maxima</div><div class="value">${today.max.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬇️ Temp minima</div><div class="value">${today.min.toFixed(1)}°C</div></div>
+          <div class="metric"><div class="label">⬆️ Temp máxima</div><div class="value">${today.max.toFixed(1)}°C</div></div>
+          <div class="metric"><div class="label">⬇️ Temp mínima</div><div class="value">${today.min.toFixed(1)}°C</div></div>
           <div class="metric"><div class="label">🌧️ Lluvia</div><div class="value">${today.rain.toFixed(0)} mm</div></div>
           <div class="metric"><div class="label">💧 Humedad</div><div class="value">${today.humidity.toFixed(0)}%</div></div>
         `;
 
         const recommendationText =
           state.color === "green"
-            ? "Ventana optima para sembrar maiz."
+            ? "Ventana óptima para sembrar maíz."
             : state.color === "yellow"
-              ? "Siembra con precaucion y seguimiento diario."
+              ? "Siembra con precaución y seguimiento diario."
               : "No se recomienda sembrar hoy.";
 
-        document.getElementById("todayRecommendation").textContent = `Recomendacion: ${recommendationText}`;
+        document.getElementById("todayRecommendation").textContent = `Recomendación: ${recommendationText}`;
 
         const alerts = riskAlerts(today);
         document.getElementById("todayAlerts").innerHTML = alerts
@@ -573,25 +571,6 @@
         const tbody = document.getElementById("forecastBody");
         const data = forecastData.slice(0, visibleDays);
 
-        function formatDateForFarmer(dateIso) {
-          const [year, month, day] = dateIso.split("-");
-          const monthNames = [
-            "enero",
-            "febrero",
-            "marzo",
-            "abril",
-            "mayo",
-            "junio",
-            "julio",
-            "agosto",
-            "septiembre",
-            "octubre",
-            "noviembre",
-            "diciembre",
-          ];
-          return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]} de ${year}`;
-        }
-
         const lastDayIso = forecastData[forecastData.length - 1]?.date;
 
         tbody.innerHTML = data
@@ -600,7 +579,7 @@
             const highlighted = lastDayIso && day.date === lastDayIso ? "highlight-day" : "";
             return `
               <tr class="${highlighted}">
-                <td>📅 ${formatDateForFarmer(day.date)}</td>
+                <td>📅 ${formatDateHeading(day.date)}</td>
                 <td>${day.temp.toFixed(1)}°C</td>
                 <td>${day.rain.toFixed(0)} mm</td>
                 <td>${day.humidity.toFixed(0)}%</td>
@@ -620,14 +599,14 @@
           state.color === "green"
             ? "Siembra recomendada."
             : state.color === "yellow"
-              ? "Siembra con precaucion."
-              : "No sembrar este dia.";
+              ? "Siembra con precaución."
+              : "No sembrar este día.";
         const simpleTip =
           focusDay.rain > 25
-            ? "Lluvia muy alta; espere mejor ventana para evitar perdida de semilla."
+            ? "Lluvia muy alta; espere mejor ventana para evitar pérdida de semilla."
             : focusDay.rain > 15
-              ? "Lluvia fuerte; valore posponer la siembra unos dias."
-              : "Condiciones mas favorables; revise suelo antes de sembrar.";
+              ? "Lluvia fuerte; conviene posponer la siembra unos días."
+              : "Condiciones más favorables; revise el suelo antes de sembrar.";
         document.getElementById("focusSectionTitle").textContent = `Lectura rápida del día 15 (${formatDateHeading(focusDay.date)})`;
         document.getElementById("focusDayGrid").innerHTML = `
           <article class="summary-item">
@@ -635,15 +614,15 @@
             <p>${formatDateHeading(focusDay.date)}</p>
           </article>
           <article class="summary-item">
-            <h4>Decision</h4>
+            <h4>Decisión</h4>
             <p>${state.icon} ${decision}</p>
           </article>
           <article class="summary-item">
-            <h4>Condicion climatica</h4>
-            <p>Temp media ${focusDay.temp.toFixed(1)}°C, lluvia ${focusDay.rain} mm, humedad ${focusDay.humidity}%.</p>
+            <h4>Condición climática</h4>
+            <p>Temp. media ${focusDay.temp.toFixed(1)}°C, lluvia ${focusDay.rain} mm, humedad ${focusDay.humidity}%.</p>
           </article>
           <article class="summary-item">
-            <h4>Recomendacion simple</h4>
+            <h4>Recomendación simple</h4>
             <p>${simpleTip}</p>
           </article>
         `;
@@ -747,7 +726,7 @@
           .map((day) => formatDateShort(day.date));
         const summaryHtml = `
           <article class="summary-item">
-            <h4>Temperatura promedio (15 dias)</h4>
+            <h4>Temperatura promedio (15 días)</h4>
             <p>${avgTemp.toFixed(1)}°C</p>
           </article>
           <article class="summary-item">
@@ -755,7 +734,7 @@
             <p>${totalRain.toFixed(0)} mm</p>
           </article>
           <article class="summary-item">
-            <h4>Dias mas lluviosos</h4>
+            <h4>Días más lluviosos</h4>
             <ul>
               ${rainyDays
                 .map((day) => `<li>${formatDateShort(day.date)}: ${day.rain} mm (${rainLevel(day.rain)})</li>`)
@@ -763,9 +742,9 @@
             </ul>
           </article>
           <article class="summary-item">
-            <h4>Ventanas optimas de siembra (verde)</h4>
-            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este periodo"}</p>
-            <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequia: variacion -41% vs ano anterior.</p>
+            <h4>Ventanas óptimas de siembra (verde)</h4>
+            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este período"}</p>
+            <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequía: variación -41% vs año anterior.</p>
           </article>
         `;
         document.getElementById("summaryGrid").innerHTML = summaryHtml;
@@ -792,7 +771,7 @@
       function initMap() {
         const lat = BASE_LAT;
         const lon = BASE_LON;
-        // Zoom algo mayor para ver bien el area metropolitana; el usuario puede alejar o mover el mapa.
+        // Zoom algo mayor para ver bien el área metropolitana; el usuario puede alejar o mover el mapa.
         const map = L.map("map", { zoomControl: true }).setView([lat, lon], 11);
         const selectedPointEl = document.getElementById("selectedPoint");
 
@@ -822,7 +801,7 @@
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           marker
-            .bindTooltip(`Parcela seleccionada\\nAltitud aprox: 650 msnm\\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
+            .bindTooltip(`Parcela seleccionada\nAltitud aprox: 650 msnm\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
               direction: "top",
               sticky: true,
             })
