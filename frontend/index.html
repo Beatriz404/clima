@@ -310,15 +310,13 @@
   <body>
     <main class="layout">
       <section class="card header">
-        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador
-</h1>
-        <p>Plataforma Predictiva con Machine Learning para Agroindustrias
- - El Salvador</p>
+        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
+        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
       </section>
 
       <section class="card today">
         <div class="today-title">
-          <h2>Hoy (2026-05-11) 🌤️</h2>
+          <h2 id="todayTitle">Hoy (cargando...) 🌤️</h2>
           <span id="todayBadge" class="badge">Cargando...</span>
         </div>
         <div class="today-grid" id="todayMetrics"></div>
@@ -351,14 +349,14 @@
       </section>
 
       <section class="card chart-section">
-        <h3 class="chart-title">Tendencia 15 días: temperatura y lluvia</h3>
+        <h3 class="chart-title">Tendencia: temperatura y lluvia</h3>
         <div class="chart-area">
           <canvas id="forecastChart"></canvas>
         </div>
       </section>
 
       <section class="card summary-section">
-        <h3 class="summary-title">Lectura rápida del 25 de mayo de 2026</h3>
+        <h3 class="summary-title" id="focusDayTitle">Lectura rápida del (cargando...)</h3>
         <div class="summary-grid" id="focusDayGrid"></div>
       </section>
 
@@ -381,28 +379,56 @@
       const BASE_LAT = 13.7741;
       const BASE_LON = -88.0884;
 
-      const baseForecastData = [
-        { date: "2026-05-11", temp: 26.6, rain: 0, humidity: 65, max: 34, min: 19 },
-        { date: "2026-05-12", temp: 27.1, rain: 0, humidity: 60, max: 34.8, min: 19.4 },
-        { date: "2026-05-13", temp: 28.4, rain: 2, humidity: 58, max: 35, min: 20 },
-        { date: "2026-05-14", temp: 27.8, rain: 15, humidity: 82, max: 33, min: 21 },
-        { date: "2026-05-15", temp: 26.2, rain: 25, humidity: 88, max: 31, min: 20 },
-        { date: "2026-05-16", temp: 25.5, rain: 8, humidity: 75, max: 30, min: 19 },
-        { date: "2026-05-17", temp: 26.9, rain: 0, humidity: 62, max: 33, min: 18 },
-        { date: "2026-05-18", temp: 27.0, rain: 6, humidity: 70, max: 32, min: 20 },
-        { date: "2026-05-19", temp: 26.7, rain: 10, humidity: 76, max: 31.5, min: 20.3 },
-        { date: "2026-05-20", temp: 26.4, rain: 14, humidity: 80, max: 31, min: 20.1 },
-        { date: "2026-05-21", temp: 26.1, rain: 18, humidity: 84, max: 30.4, min: 19.8 },
-        { date: "2026-05-22", temp: 25.8, rain: 22, humidity: 87, max: 30, min: 19.5 },
-        { date: "2026-05-23", temp: 25.4, rain: 28, humidity: 89, max: 29.5, min: 19.2 },
-        { date: "2026-05-24", temp: 25.1, rain: 34, humidity: 91, max: 29, min: 19 },
-        { date: "2026-05-25", temp: 24.9, rain: 38, humidity: 92, max: 28.7, min: 18.9 },
+      function generarFechasDinamicas(dias) {
+        const fechas = [];
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        
+        for (let i = 0; i < dias; i++) {
+          const fecha = new Date(hoy);
+          fecha.setDate(hoy.getDate() + i);
+          const year = fecha.getFullYear();
+          const month = String(fecha.getMonth() + 1).padStart(2, '0');
+          const day = String(fecha.getDate()).padStart(2, '0');
+          fechas.push(`${year}-${month}-${day}`);
+        }
+        return fechas;
+      }
+
+      const baseValues = [
+        { temp: 26.6, rain: 0, humidity: 65, max: 34, min: 19 },
+        { temp: 27.1, rain: 0, humidity: 60, max: 34.8, min: 19.4 },
+        { temp: 28.4, rain: 2, humidity: 58, max: 35, min: 20 },
+        { temp: 27.8, rain: 15, humidity: 82, max: 33, min: 21 },
+        { temp: 26.2, rain: 25, humidity: 88, max: 31, min: 20 },
+        { temp: 25.5, rain: 8, humidity: 75, max: 30, min: 19 },
+        { temp: 26.9, rain: 0, humidity: 62, max: 33, min: 18 },
+        { temp: 27.0, rain: 6, humidity: 70, max: 32, min: 20 },
+        { temp: 26.7, rain: 10, humidity: 76, max: 31.5, min: 20.3 },
+        { temp: 26.4, rain: 14, humidity: 80, max: 31, min: 20.1 },
+        { temp: 26.1, rain: 18, humidity: 84, max: 30.4, min: 19.8 },
+        { temp: 25.8, rain: 22, humidity: 87, max: 30, min: 19.5 },
+        { temp: 25.4, rain: 28, humidity: 89, max: 29.5, min: 19.2 },
+        { temp: 25.1, rain: 34, humidity: 91, max: 29, min: 19 },
+        { temp: 24.9, rain: 38, humidity: 92, max: 28.7, min: 18.9 },
       ];
 
-      let forecastData = baseForecastData.map((day) => ({ ...day }));
+      let forecastData = [];
       let visibleDays = 7;
       let forecastChart;
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON };
+
+      function inicializarDatos() {
+        const fechas = generarFechasDinamicas(15);
+        forecastData = baseValues.map((value, index) => ({
+          date: fechas[index],
+          temp: value.temp,
+          rain: value.rain,
+          humidity: value.humidity,
+          max: value.max,
+          min: value.min,
+        }));
+      }
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -412,18 +438,28 @@
         return Math.round(value * 10) / 10;
       }
 
+      function formatearFechaParaTitulo(dateIso) {
+        if (!dateIso) return "";
+        const [year, month, day] = dateIso.split("-");
+        const monthNames = [
+          "enero", "febrero", "marzo", "abril", "mayo", "junio",
+          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+        ];
+        return `${parseInt(day)} de ${monthNames[parseInt(month) - 1]} de ${year}`;
+      }
+
       function recalculateForecastForLocation(lat, lon) {
         selectedLocation = { lat, lon };
         const latDelta = lat - BASE_LAT;
         const lonDelta = lon - BASE_LON;
 
-        // Ajuste simplificado por ubicacion: representa cambios de microclima dentro del pais.
-        // Se aumenta amplitud para que el cambio sea visible al usuario en diferentes zonas.
         const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
         const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
         const humidityShift = clamp(latDelta * 16 + lonDelta * -14, -18, 22);
 
-        forecastData = baseForecastData.map((baseDay, index) => {
+        const fechas = generarFechasDinamicas(15);
+        
+        forecastData = baseValues.map((baseDay, index) => {
           const rainByDayFactor = index * 0.45;
           const extraRainCooling = baseDay.rain > 18 ? 0.4 : 0;
           const adjustedTemp = clamp(baseDay.temp + tempShift - extraRainCooling, 18, 35);
@@ -434,7 +470,7 @@
           const adjustedMin = clamp(adjustedTemp - diurnalRange / 2, 16, 28);
 
           return {
-            ...baseDay,
+            date: fechas[index],
             temp: round1(adjustedTemp),
             rain: round1(adjustedRain),
             humidity: Math.round(adjustedHumidity),
@@ -445,10 +481,6 @@
       }
 
       function evaluateTrafficLight(day) {
-        // Logica del semaforo:
-        // 1) Rojo si hay condicion critica: lluvia >15mm, temp extrema (<18 o >35) o riesgo alto.
-        // 2) Amarillo si no es rojo y hay precaucion: lluvia 5-15mm o humedad fuera de 50-85%.
-        // 3) Verde cuando cumple ventana recomendada de siembra.
         const highRisk = day.rain >= 25 || day.humidity >= 90;
         if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
           return {
@@ -494,8 +526,14 @@
       }
 
       function updateTodayCard() {
+        if (!forecastData.length) return;
+        
         const today = forecastData[0];
         const state = evaluateTrafficLight(today);
+        
+        // ✅ Actualizar título con fecha dinámica
+        document.getElementById("todayTitle").innerHTML = `Hoy (${formatearFechaParaTitulo(today.date)}) 🌤️`;
+        
         const badge = document.getElementById("todayBadge");
         badge.className = `badge ${state.color}`;
         badge.textContent = `${state.icon} ${state.label}`;
@@ -531,18 +569,8 @@
         function formatDateForFarmer(dateIso) {
           const [year, month, day] = dateIso.split("-");
           const monthNames = [
-            "enero",
-            "febrero",
-            "marzo",
-            "abril",
-            "mayo",
-            "junio",
-            "julio",
-            "agosto",
-            "septiembre",
-            "octubre",
-            "noviembre",
-            "diciembre",
+            "enero", "febrero", "marzo", "abril", "mayo", "junio",
+            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
           ];
           return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]} de ${year}`;
         }
@@ -550,9 +578,8 @@
         tbody.innerHTML = data
           .map((day) => {
             const state = evaluateTrafficLight(day);
-            const highlighted = day.date === "2026-05-25" ? "highlight-day" : "";
             return `
-              <tr class="${highlighted}">
+              <tr>
                 <td>📅 ${formatDateForFarmer(day.date)}</td>
                 <td>${day.temp.toFixed(1)}°C</td>
                 <td>${day.rain.toFixed(0)} mm</td>
@@ -566,8 +593,15 @@
       }
 
       function renderFocusDay() {
-        const focusDay = forecastData.find((day) => day.date === "2026-05-25");
+        if (!forecastData.length) return;
+        
+        const focusIndex = Math.min(14, forecastData.length - 1);
+        const focusDay = forecastData[focusIndex];
+        
         if (!focusDay) return;
+        
+        document.getElementById("focusDayTitle").innerHTML = `Lectura rápida del ${formatearFechaParaTitulo(focusDay.date)}`;
+        
         const state = evaluateTrafficLight(focusDay);
         const decision =
           state.color === "green"
@@ -575,10 +609,11 @@
             : state.color === "yellow"
               ? "Siembra con precaucion."
               : "No sembrar este dia.";
+              
         document.getElementById("focusDayGrid").innerHTML = `
           <article class="summary-item">
             <h4>Fecha</h4>
-            <p>25 de mayo de 2026</p>
+            <p>${formatearFechaParaTitulo(focusDay.date)}</p>
           </article>
           <article class="summary-item">
             <h4>Decision</h4>
@@ -590,7 +625,7 @@
           </article>
           <article class="summary-item">
             <h4>Recomendacion simple</h4>
-            <p>Lluvia muy alta; espere mejor ventana para evitar perdida de semilla.</p>
+            <p>${focusDay.rain > 25 ? "Lluvia muy alta; espere mejor ventana para evitar perdida de semilla." : "Monitorear condiciones antes de sembrar."}</p>
           </article>
         `;
       }
@@ -598,7 +633,10 @@
       function renderChart() {
         const labels = forecastData
           .slice(0, visibleDays)
-          .map((day) => day.date.split("-").reverse().join("/"));
+          .map((day) => {
+            const [year, month, dayNum] = day.date.split("-");
+            return `${dayNum}/${month}`;
+          });
         const temps = forecastData.slice(0, visibleDays).map((day) => day.temp);
         const rains = forecastData.slice(0, visibleDays).map((day) => day.rain);
 
@@ -606,7 +644,8 @@
           forecastChart.destroy();
         }
 
-        forecastChart = new Chart(document.getElementById("forecastChart"), {
+        const ctx = document.getElementById("forecastChart").getContext("2d");
+        forecastChart = new Chart(ctx, {
           data: {
             labels,
             datasets: [
@@ -662,18 +701,8 @@
         function formatDateShort(dateIso) {
           const [year, month, day] = dateIso.split("-");
           const monthNames = [
-            "enero",
-            "febrero",
-            "marzo",
-            "abril",
-            "mayo",
-            "junio",
-            "julio",
-            "agosto",
-            "septiembre",
-            "octubre",
-            "noviembre",
-            "diciembre",
+            "enero", "febrero", "marzo", "abril", "mayo", "junio",
+            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
           ];
           return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]}`;
         }
@@ -689,6 +718,7 @@
         const totalRain = forecastData.reduce((acc, day) => acc + day.rain, 0);
         const rainyDays = [...forecastData].sort((a, b) => b.rain - a.rain).slice(0, 3);
         const greenWindows = forecastData.filter((day) => evaluateTrafficLight(day).color === "green").map((day) => day.date);
+        
         const summaryHtml = `
           <article class="summary-item">
             <h4>Temperatura promedio (15 dias)</h4>
@@ -708,7 +738,7 @@
           </article>
           <article class="summary-item">
             <h4>Ventanas optimas de siembra (verde)</h4>
-            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este periodo"}</p>
+            <p>${greenWindows.length ? greenWindows.map(d => formatDateShort(d)).join(", ") : "Sin ventanas verdes en este periodo"}</p>
             <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequia: variacion -41% vs ano anterior.</p>
           </article>
         `;
@@ -740,8 +770,8 @@
         const selectedPointEl = document.getElementById("selectedPoint");
 
         const elSalvadorBounds = L.latLngBounds(
-          [13.1, -90.2], // suroeste
-          [14.6, -87.6], // noreste
+          [13.1, -90.2],
+          [14.6, -87.6],
         );
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -765,7 +795,7 @@
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           marker
-            .bindTooltip(`Parcela seleccionada\\nAltitud aprox: 650 msnm\\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
+            .bindTooltip(`Parcela seleccionada\nAltitud aprox: 650 msnm\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
               direction: "top",
               sticky: true,
             })
@@ -794,10 +824,12 @@
         });
       }
 
+      inicializarDatos();
+      recalculateForecastForLocation(BASE_LAT, BASE_LON);
+      
       document.getElementById("btn7").addEventListener("click", () => setToggle(7));
       document.getElementById("btn15").addEventListener("click", () => setToggle(15));
-
-      recalculateForecastForLocation(BASE_LAT, BASE_LON);
+      
       refreshDashboard();
       initMap();
     </script>
