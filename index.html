@@ -1,15 +1,18 @@
+```html
 <!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panel Agrícola | El Salvador</title>
+
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
+
     <style>
       :root {
         --fondo: #f4f1e6;
@@ -97,10 +100,12 @@
         background: var(--verde-claro);
         color: var(--verde);
       }
+
       .badge.yellow {
         background: var(--amarillo-claro);
         color: #82540f;
       }
+
       .badge.red {
         background: var(--rojo-claro);
         color: var(--rojo);
@@ -299,19 +304,23 @@
         font-size: 0.92rem;
         margin: 0;
       }
+
       .marn-card .marn-error {
         color: #8b2e22;
         font-size: 0.92rem;
       }
+
       .marn-card ul {
         margin: 0.5rem 0 0 1.1rem;
         padding: 0;
       }
+
       .marn-card li {
         margin: 0.4rem 0;
         font-size: 0.92rem;
         line-height: 1.35;
       }
+
       .marn-meta {
         font-size: 0.84rem;
         color: #5e4b3a;
@@ -324,22 +333,56 @@
         .today-grid {
           grid-template-columns: repeat(2, minmax(120px, 1fr));
         }
+
         .summary-grid {
           grid-template-columns: 1fr;
         }
+
         .chart-area {
           height: 290px;
         }
       }
+
+      @media (max-width: 600px) {
+        .today-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .calc-location {
+          margin-left: 0;
+        }
+      }
     </style>
   </head>
+
   <body>
     <main class="layout">
+
       <section class="card header">
         <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
-        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
-        <p class="marn-meta" style="border-top: none; padding-top: 0.35rem; margin-top: 0.5rem">
-          Realiza lectura automática del <strong>portal público del MARN</strong> (<a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a>) vía la API del mismo sistema cuando accede por el servidor
+
+        <p>
+          Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador
+        </p>
+
+        <p
+          class="marn-meta"
+          style="border-top: none; padding-top: 0.35rem; margin-top: 0.5rem"
+        >
+          Realiza lectura automática del
+          <strong>portal público del MARN</strong>
+          (<a
+            href="https://www.marn.gob.sv/"
+            target="_blank"
+            rel="noopener"
+            >marn.gob.sv</a
+          >)
+          vía la API del mismo sistema cuando accede por el servidor
         </p>
       </section>
 
@@ -348,18 +391,31 @@
           <h2 id="todayTitle">Hoy 🌤️</h2>
           <span id="todayBadge" class="badge">Cargando...</span>
         </div>
+
         <div class="today-grid" id="todayMetrics"></div>
+
         <p id="todayRecommendation" class="recommendation"></p>
+
         <div id="todayAlerts" class="alerts"></div>
       </section>
 
       <section class="card">
         <div class="toolbar">
           <strong>Pronóstico:</strong>
-          <button id="btn7" class="toggle-btn active" type="button">7 días</button>
-          <button id="btn15" class="toggle-btn" type="button">15 días</button>
-          <span id="calcLocation" class="calc-location">Calculado para: San Salvador (por defecto)</span>
+
+          <button id="btn7" class="toggle-btn active" type="button">
+            7 días
+          </button>
+
+          <button id="btn15" class="toggle-btn" type="button">
+            15 días
+          </button>
+
+          <span id="calcLocation" class="calc-location">
+            Calculado para: San Salvador (por defecto)
+          </span>
         </div>
+
         <div class="table-wrap">
           <table>
             <thead>
@@ -372,13 +428,17 @@
                 <th>Nota agrícola</th>
               </tr>
             </thead>
+
             <tbody id="forecastBody"></tbody>
           </table>
         </div>
       </section>
 
       <section class="card chart-section">
-        <h3 class="chart-title">Tendencia 15 días: temperatura y lluvia</h3>
+        <h3 class="chart-title">
+          Tendencia 15 días: temperatura y lluvia
+        </h3>
+
         <div class="chart-area">
           <canvas id="forecastChart"></canvas>
         </div>
@@ -386,37 +446,63 @@
 
       <section class="card summary-section marn-card">
         <h3 class="summary-title">Portal MARN El Salvador</h3>
+
         <p class="map-note">
           Enlaces y textos detectados en el sitio oficial
-          <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a> (resumen técnico; las cifras de temperatura y lluvia de arriba siguen siendo el panel local/Open-Meteo cuando use la API).
+          <a
+            href="https://www.marn.gob.sv/"
+            target="_blank"
+            rel="noopener"
+            >marn.gob.sv</a
+          >
+          (resumen técnico; las cifras de temperatura y lluvia de arriba siguen
+          siendo el panel local/Open-Meteo cuando use la API).
         </p>
+
         <div id="marnPanel">
-          <p class="marn-hint">Cargando resumen del portal MARN…</p>
+          <p class="marn-hint">
+            Cargando resumen del portal MARN…
+          </p>
         </div>
       </section>
 
       <section class="card summary-section">
-        <h3 class="summary-title" id="focusSectionTitle">Lectura rápida del último día del pronóstico</h3>
+        <h3 class="summary-title" id="focusSectionTitle">
+          Lectura rápida del último día del pronóstico
+        </h3>
+
         <div class="summary-grid" id="focusDayGrid"></div>
       </section>
 
       <section class="card summary-section">
-        <h3 class="summary-title">Resumen ejecutivo para agricultor</h3>
+        <h3 class="summary-title">
+          Resumen ejecutivo para agricultor
+        </h3>
+
         <div class="summary-grid" id="summaryGrid"></div>
       </section>
 
       <section class="card map-section">
         <h3 class="map-title">Mapa de referencia de parcela</h3>
+
         <div id="map"></div>
+
         <p class="map-note">
-          Por defecto: centro de San Salvador. Puede arrastrar el marcador o hacer clic en el mapa para otra parcela en El Salvador.
+          Por defecto: centro de San Salvador. Puede arrastrar el marcador o
+          hacer clic en el mapa para otra parcela en El Salvador.
         </p>
-        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
+
+        <p id="selectedPoint" class="map-selection">
+          Punto seleccionado: 13.6929, -89.2182 (San Salvador)
+        </p>
       </section>
+
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
@@ -442,7 +528,10 @@
       let forecastData = [];
       let visibleDays = 7;
       let forecastChart;
-      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON };
+      let selectedLocation = {
+        lat: BASE_LAT,
+        lon: BASE_LON,
+      };
 
       function localISODate(date = new Date()) {
         const y = date.getFullYear();
@@ -467,7 +556,9 @@
 
       function recalculateForecastForLocation(lat, lon) {
         selectedLocation = { lat, lon };
+
         const anchorIso = localISODate(new Date());
+
         const datedBase = FORECAST_PATTERN.map((row, index) => ({
           ...row,
           date: addDaysToISODate(anchorIso, index),
@@ -476,19 +567,64 @@
         const latDelta = lat - BASE_LAT;
         const lonDelta = lon - BASE_LON;
 
-        const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
-        const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
-        const humidityShift = clamp(latDelta * 16 + lonDelta * -14, -18, 22);
+        const tempShift = clamp(
+          -(latDelta * 2.4) + lonDelta * 1.6,
+          -4.2,
+          4.2
+        );
+
+        const rainShift = clamp(
+          latDelta * 22 + lonDelta * -20,
+          -18,
+          24
+        );
+
+        const humidityShift = clamp(
+          latDelta * 16 + lonDelta * -14,
+          -18,
+          22
+        );
 
         forecastData = datedBase.map((baseDay, index) => {
           const rainByDayFactor = index * 0.45;
+
           const extraRainCooling = baseDay.rain > 18 ? 0.4 : 0;
-          const adjustedTemp = clamp(baseDay.temp + tempShift - extraRainCooling, 18, 35);
-          const adjustedRain = clamp(baseDay.rain + rainShift + rainByDayFactor, 0, 40);
-          const adjustedHumidity = clamp(baseDay.humidity + humidityShift + index * 0.2, 45, 95);
-          const diurnalRange = clamp(baseDay.max - baseDay.min, 8, 15);
-          const adjustedMax = clamp(adjustedTemp + diurnalRange / 2, 22, 37);
-          const adjustedMin = clamp(adjustedTemp - diurnalRange / 2, 16, 28);
+
+          const adjustedTemp = clamp(
+            baseDay.temp + tempShift - extraRainCooling,
+            18,
+            35
+          );
+
+          const adjustedRain = clamp(
+            baseDay.rain + rainShift + rainByDayFactor,
+            0,
+            40
+          );
+
+          const adjustedHumidity = clamp(
+            baseDay.humidity + humidityShift + index * 0.2,
+            45,
+            95
+          );
+
+          const diurnalRange = clamp(
+            baseDay.max - baseDay.min,
+            8,
+            15
+          );
+
+          const adjustedMax = clamp(
+            adjustedTemp + diurnalRange / 2,
+            22,
+            37
+          );
+
+          const adjustedMin = clamp(
+            adjustedTemp - diurnalRange / 2,
+            16,
+            28
+          );
 
           return {
             ...baseDay,
@@ -502,32 +638,53 @@
       }
 
       function evaluateTrafficLight(day) {
-      
-        const highRisk = day.rain >= 25 || day.humidity >= 90;
-        if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
+
+        const highRisk =
+          day.rain >= 25 || day.humidity >= 90;
+
+        if (
+          day.rain > 15 ||
+          day.temp > 35 ||
+          day.temp < 18 ||
+          highRisk
+        ) {
           return {
             color: "red",
             icon: "🔴",
             label: "No sembrar",
-            note: "Riesgo alto por exceso de lluvia o condición extrema.",
+            note:
+              "Riesgo alto por exceso de lluvia o condición extrema.",
           };
         }
 
-        if (day.rain > 5 || day.humidity < 50 || day.humidity > 85) {
+        if (
+          day.rain > 5 ||
+          day.humidity < 50 ||
+          day.humidity > 85
+        ) {
           return {
             color: "yellow",
             icon: "🟡",
             label: "Precaución",
-            note: "Monitorear suelo y pronóstico antes de sembrar.",
+            note:
+              "Monitorear suelo y pronóstico antes de sembrar.",
           };
         }
 
-        if (day.temp >= 20 && day.temp <= 30 && day.rain >= 0 && day.rain <= 5 && day.humidity >= 50 && day.humidity <= 80) {
+        if (
+          day.temp >= 20 &&
+          day.temp <= 30 &&
+          day.rain >= 0 &&
+          day.rain <= 5 &&
+          day.humidity >= 50 &&
+          day.humidity <= 80
+        ) {
           return {
             color: "green",
             icon: "🟢",
             label: "Recomendada",
-            note: "Ventana óptima para labores de siembra.",
+            note:
+              "Ventana óptima para labores de siembra.",
           };
         }
 
@@ -535,20 +692,48 @@
           color: "yellow",
           icon: "🟡",
           label: "Precaución",
-          note: "Condiciones intermedias, revisar humedad del suelo.",
+          note:
+            "Condiciones intermedias, revisar humedad del suelo.",
         };
       }
 
       function riskAlerts(day) {
         const alerts = [];
-        if (day.rain === 0) alerts.push({ type: "warn", text: "Alerta de sequía puntual (0 mm)" });
-        if (day.rain > 15) alerts.push({ type: "danger", text: "Alerta por exceso de lluvia" });
-        if (day.humidity > 85) alerts.push({ type: "warn", text: "Humedad alta: posible riesgo de hongos" });
-        return alerts.length ? alerts : [{ type: "warn", text: "Sin alertas críticas hoy" }];
+
+        if (day.rain === 0) {
+          alerts.push({
+            type: "warn",
+            text: "Alerta de sequía puntual (0 mm)",
+          });
+        }
+
+        if (day.rain > 15) {
+          alerts.push({
+            type: "danger",
+            text: "Alerta por exceso de lluvia",
+          });
+        }
+
+        if (day.humidity > 85) {
+          alerts.push({
+            type: "warn",
+            text: "Humedad alta: posible riesgo de hongos",
+          });
+        }
+
+        return alerts.length
+          ? alerts
+          : [
+              {
+                type: "warn",
+                text: "Sin alertas críticas hoy",
+              },
+            ];
       }
 
       function formatDateHeading(iso) {
         const [year, month, day] = iso.split("-");
+
         const monthNames = [
           "enero",
           "febrero",
@@ -563,58 +748,114 @@
           "noviembre",
           "diciembre",
         ];
-        return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]} de ${year}`;
+
+        return `${parseInt(day, 10)} de ${
+          monthNames[parseInt(month, 10) - 1]
+        } de ${year}`;
       }
 
       function updateTodayCard() {
         const today = forecastData[0];
-        document.getElementById("todayTitle").textContent = `Hoy (${formatDateHeading(today.date)}) 🌤️`;
+
+        document.getElementById(
+          "todayTitle"
+        ).textContent = `Hoy (${formatDateHeading(
+          today.date
+        )}) 🌤️`;
+
         const state = evaluateTrafficLight(today);
-        const badge = document.getElementById("todayBadge");
+
+        const badge = document.getElementById(
+          "todayBadge"
+        );
+
         badge.className = `badge ${state.color}`;
         badge.textContent = `${state.icon} ${state.label}`;
 
-        const metrics = document.getElementById("todayMetrics");
+        const metrics = document.getElementById(
+          "todayMetrics"
+        );
+
         metrics.innerHTML = `
-          <div class="metric"><div class="label">🌡️ Temp media</div><div class="value">${today.temp.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬆️ Temp máxima</div><div class="value">${today.max.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬇️ Temp mínima</div><div class="value">${today.min.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">🌧️ Lluvia</div><div class="value">${today.rain.toFixed(0)} mm</div></div>
-          <div class="metric"><div class="label">💧 Humedad</div><div class="value">${today.humidity.toFixed(0)}%</div></div>
+          <div class="metric">
+            <div class="label">🌡️ Temp media</div>
+            <div class="value">${today.temp.toFixed(1)}°C</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">⬆️ Temp máxima</div>
+            <div class="value">${today.max.toFixed(1)}°C</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">⬇️ Temp mínima</div>
+            <div class="value">${today.min.toFixed(1)}°C</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">🌧️ Lluvia</div>
+            <div class="value">${today.rain.toFixed(0)} mm</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">💧 Humedad</div>
+            <div class="value">${today.humidity.toFixed(0)}%</div>
+          </div>
         `;
 
         const recommendationText =
           state.color === "green"
             ? "Ventana óptima para sembrar maíz."
             : state.color === "yellow"
-              ? "Siembra con precaución y seguimiento diario."
-              : "No se recomienda sembrar hoy.";
+            ? "Siembra con precaución y seguimiento diario."
+            : "No se recomienda sembrar hoy.";
 
-        document.getElementById("todayRecommendation").textContent = `Recomendación: ${recommendationText}`;
+        document.getElementById(
+          "todayRecommendation"
+        ).textContent =
+          `Recomendación: ${recommendationText}`;
 
         const alerts = riskAlerts(today);
-        document.getElementById("todayAlerts").innerHTML = alerts
-          .map((alert) => `<span class="alert-pill ${alert.type}">⚠️ ${alert.text}</span>`)
+
+        document.getElementById(
+          "todayAlerts"
+        ).innerHTML = alerts
+          .map(
+            (alert) => `
+              <span class="alert-pill ${alert.type}">
+                ⚠️ ${alert.text}
+              </span>
+            `
+          )
           .join("");
       }
 
       function renderTable() {
-        const tbody = document.getElementById("forecastBody");
+        const tbody = document.getElementById(
+          "forecastBody"
+        );
+
         const data = forecastData.slice(0, visibleDays);
 
-        const lastDayIso = forecastData[forecastData.length - 1]?.date;
+        const lastDayIso =
+          forecastData[forecastData.length - 1]?.date;
 
         tbody.innerHTML = data
           .map((day) => {
             const state = evaluateTrafficLight(day);
-            const highlighted = lastDayIso && day.date === lastDayIso ? "highlight-day" : "";
+
+            const highlighted =
+              lastDayIso && day.date === lastDayIso
+                ? "highlight-day"
+                : "";
+
             return `
               <tr class="${highlighted}">
                 <td>📅 ${formatDateHeading(day.date)}</td>
                 <td>${day.temp.toFixed(1)}°C</td>
                 <td>${day.rain.toFixed(0)} mm</td>
                 <td>${day.humidity.toFixed(0)}%</td>
-                <td class="signal" title="${state.label}">${state.icon}</td>
+                <td class="signal">${state.icon}</td>
                 <td>${state.note}</td>
               </tr>
             `;
@@ -624,34 +865,56 @@
 
       function renderFocusDay() {
         const focusDay = forecastData[14];
+
         if (!focusDay) return;
+
         const state = evaluateTrafficLight(focusDay);
+
         const decision =
           state.color === "green"
             ? "Siembra recomendada."
             : state.color === "yellow"
-              ? "Siembra con precaución."
-              : "No sembrar este día.";
+            ? "Siembra con precaución."
+            : "No sembrar este día.";
+
         const simpleTip =
           focusDay.rain > 25
             ? "Lluvia muy alta; espere mejor ventana para evitar pérdida de semilla."
             : focusDay.rain > 15
-              ? "Lluvia fuerte; conviene posponer la siembra unos días."
-              : "Condiciones más favorables; revise el suelo antes de sembrar.";
-        document.getElementById("focusSectionTitle").textContent = `Lectura rápida del día 15 (${formatDateHeading(focusDay.date)})`;
-        document.getElementById("focusDayGrid").innerHTML = `
+            ? "Lluvia fuerte; conviene posponer la siembra unos días."
+            : "Condiciones más favorables; revise el suelo antes de sembrar.";
+
+        document.getElementById(
+          "focusSectionTitle"
+        ).textContent =
+          `Lectura rápida del día 15 (${formatDateHeading(
+            focusDay.date
+          )})`;
+
+        document.getElementById(
+          "focusDayGrid"
+        ).innerHTML = `
           <article class="summary-item">
             <h4>Fecha</h4>
             <p>${formatDateHeading(focusDay.date)}</p>
           </article>
+
           <article class="summary-item">
             <h4>Decisión</h4>
             <p>${state.icon} ${decision}</p>
           </article>
+
           <article class="summary-item">
             <h4>Condición climática</h4>
-            <p>Temp. media ${focusDay.temp.toFixed(1)}°C, lluvia ${focusDay.rain} mm, humedad ${focusDay.humidity}%.</p>
+            <p>
+              Temp. media ${focusDay.temp.toFixed(
+                1
+              )}°C,
+              lluvia ${focusDay.rain} mm,
+              humedad ${focusDay.humidity}%.
+            </p>
           </article>
+
           <article class="summary-item">
             <h4>Recomendación simple</h4>
             <p>${simpleTip}</p>
@@ -662,69 +925,103 @@
       function renderChart() {
         const labels = forecastData
           .slice(0, visibleDays)
-          .map((day) => day.date.split("-").reverse().join("/"));
-        const temps = forecastData.slice(0, visibleDays).map((day) => day.temp);
-        const rains = forecastData.slice(0, visibleDays).map((day) => day.rain);
+          .map((day) =>
+            day.date.split("-").reverse().join("/")
+          );
+
+        const temps = forecastData
+          .slice(0, visibleDays)
+          .map((day) => day.temp);
+
+        const rains = forecastData
+          .slice(0, visibleDays)
+          .map((day) => day.rain);
 
         if (forecastChart) {
           forecastChart.destroy();
         }
 
-        forecastChart = new Chart(document.getElementById("forecastChart"), {
-          data: {
-            labels,
-            datasets: [
-              {
-                type: "line",
-                label: "Temperatura (°C)",
-                data: temps,
-                borderColor: "#2c8f4f",
-                backgroundColor: "rgba(44, 143, 79, 0.2)",
-                borderWidth: 3,
-                pointRadius: 3,
-                tension: 0.25,
-                yAxisID: "yTemp",
-              },
-              {
-                type: "bar",
-                label: "Lluvia (mm)",
-                data: rains,
-                backgroundColor: "rgba(32, 111, 173, 0.65)",
-                borderRadius: 4,
-                yAxisID: "yRain",
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: "top" },
+        forecastChart = new Chart(
+          document.getElementById("forecastChart"),
+          {
+            data: {
+              labels,
+              datasets: [
+                {
+                  type: "line",
+                  label: "Temperatura (°C)",
+                  data: temps,
+                  borderColor: "#2c8f4f",
+                  backgroundColor:
+                    "rgba(44, 143, 79, 0.2)",
+                  borderWidth: 3,
+                  pointRadius: 3,
+                  tension: 0.25,
+                  yAxisID: "yTemp",
+                },
+                {
+                  type: "bar",
+                  label: "Lluvia (mm)",
+                  data: rains,
+                  backgroundColor:
+                    "rgba(32, 111, 173, 0.65)",
+                  borderRadius: 4,
+                  yAxisID: "yRain",
+                },
+              ],
             },
-            scales: {
-              yTemp: {
-                type: "linear",
-                position: "left",
-                min: 15,
-                max: 35,
-                title: { display: true, text: "Temperatura °C" },
+
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+
+              plugins: {
+                legend: {
+                  position: "top",
+                },
               },
-              yRain: {
-                type: "linear",
-                position: "right",
-                min: 0,
-                max: 40,
-                grid: { drawOnChartArea: false },
-                title: { display: true, text: "Lluvia mm" },
+
+              scales: {
+                yTemp: {
+                  type: "linear",
+                  position: "left",
+                  min: 15,
+                  max: 35,
+
+                  title: {
+                    display: true,
+                    text: "Temperatura °C",
+                  },
+                },
+
+                yRain: {
+                  type: "linear",
+                  position: "right",
+                  min: 0,
+                  max: 40,
+
+                  grid: {
+                    drawOnChartArea: false,
+                  },
+
+                  title: {
+                    display: true,
+                    text: "Lluvia mm",
+                  },
+                },
               },
             },
-          },
-        });
+          }
+        );
       }
 
       function renderSummary() {
+
         function formatDateShort(dateIso) {
-          const [year, month, day] = dateIso.split("-");
+
+          const [year, month, day] =
+            dateIso.split("-");
+
           const monthNames = [
             "enero",
             "febrero",
@@ -739,7 +1036,10 @@
             "noviembre",
             "diciembre",
           ];
-          return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]}`;
+
+          return `${parseInt(day, 10)} de ${
+            monthNames[parseInt(month, 10) - 1]
+          }`;
         }
 
         function rainLevel(mm) {
@@ -749,196 +1049,429 @@
           return "Lluvia leve";
         }
 
-        const avgTemp = forecastData.reduce((acc, day) => acc + day.temp, 0) / forecastData.length;
-        const totalRain = forecastData.reduce((acc, day) => acc + day.rain, 0);
-        const rainyDays = [...forecastData].sort((a, b) => b.rain - a.rain).slice(0, 3);
+        const avgTemp =
+          forecastData.reduce(
+            (acc, day) => acc + day.temp,
+            0
+          ) / forecastData.length;
+
+        const totalRain = forecastData.reduce(
+          (acc, day) => acc + day.rain,
+          0
+        );
+
+        const rainyDays = [...forecastData]
+          .sort((a, b) => b.rain - a.rain)
+          .slice(0, 3);
+
         const greenWindows = forecastData
-          .filter((day) => evaluateTrafficLight(day).color === "green")
+          .filter(
+            (day) =>
+              evaluateTrafficLight(day).color ===
+              "green"
+          )
           .map((day) => formatDateShort(day.date));
+
         const summaryHtml = `
           <article class="summary-item">
             <h4>Temperatura promedio (15 días)</h4>
             <p>${avgTemp.toFixed(1)}°C</p>
           </article>
+
           <article class="summary-item">
             <h4>Lluvia acumulada</h4>
             <p>${totalRain.toFixed(0)} mm</p>
           </article>
+
           <article class="summary-item">
             <h4>Días más lluviosos</h4>
+
             <ul>
               ${rainyDays
-                .map((day) => `<li>${formatDateShort(day.date)}: ${day.rain} mm (${rainLevel(day.rain)})</li>`)
+                .map(
+                  (day) => `
+                    <li>
+                      ${formatDateShort(day.date)}:
+                      ${day.rain} mm
+                      (${rainLevel(day.rain)})
+                    </li>
+                  `
+                )
                 .join("")}
             </ul>
           </article>
+
           <article class="summary-item">
             <h4>Ventanas óptimas de siembra (verde)</h4>
-            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este período"}</p>
-            <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequía: variación -41% vs año anterior.</p>
+
+            <p>
+              ${
+                greenWindows.length
+                  ? greenWindows.join(", ")
+                  : "Sin ventanas verdes en este período"
+              }
+            </p>
+
+            <p style="margin-top:0.5rem;">
+              <strong>Alerta principal:</strong>
+              Riesgo de sequía:
+              variación -41% vs año anterior.
+            </p>
           </article>
         `;
-        document.getElementById("summaryGrid").innerHTML = summaryHtml;
+
+        document.getElementById(
+          "summaryGrid"
+        ).innerHTML = summaryHtml;
       }
 
-      function escHtml(s) {
-        return String(s ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
-
-     
       async function loadMarnPortalSummary() {
-  const panel = document.getElementById("marnPanel");
-  if (!panel) return;
-  
-  const { protocol, origin } = window.location;
-  
-  // Si es file://, mostrar datos simulados pero útiles
-  if (protocol === "file:") {
-    mostrarDatosMARNMock(panel);
-    return;
-  }
-  
-  const lat = selectedLocation.lat;
-  const lon = selectedLocation.lon;
-  const alt = 650;
-  const qs = new URLSearchParams({ latitud: String(lat), longitud: String(lon), altitud: String(alt) });
-  const url = `${origin}/api/v1/nacional/marn/resumen?${qs.toString()}`;
-  
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(resp.statusText);
-    }
-    const data = await resp.json();
-    mostrarDatosMARNReal(panel, data);
-  } catch (err) {
-    // Si falla la API, mostrar datos simulados
-    mostrarDatosMARNMock(panel, err.message);
-  }
-}
 
-function mostrarDatosMARNReal(panel, data) {
-  // Si el backend devuelve datos estructurados, los mostramos
-  const alertas = data.alertas || [];
-  const boletin = data.boletin || {};
-  
-  let html = `
-    <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">🌊 ALERTAS ACTIVAS DEL MARN</h4>
-      ${alertas.length > 0 ? alertas.map(a => `
-        <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
-          <span style="font-weight: 700;">• ${a.fecha || 'Fecha no disponible'}</span><br/>
-          <span style="color: #2c3e50;">${a.mensaje || 'Sin descripción'}</span>
-          ${a.probabilidad ? `<span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">${a.probabilidad}</span>` : ''}
-        </div>
-      `).join('') : '<p style="color: #666;">No hay alertas activas en este momento</p>'}
-    </div>
+        const panel =
+          document.getElementById("marnPanel");
 
-    <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">📊 BOLETÍN CLIMATOLÓGICO (último)</h4>
-      <div style="margin-bottom: 0.4rem;">• <strong>Fase:</strong> ${boletin.fase || 'Transición a invierno'}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Pronóstico:</strong> ${boletin.pronostico || 'Inicio de canícula en 15 días'}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Temperatura esperada:</strong> ${boletin.temperatura || '24-32°C'}</div>
-      ${boletin.fecha ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">📅 Actualizado: ${boletin.fecha}</div>` : ''}
-    </div>
+        if (!panel) return;
 
-    <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
-      <a href="https://www.ambiente.gob.sv/" target="_blank" rel="noopener" style="color: #1a5f7a; text-decoration: none; font-weight: 700;">
-        🔗 Fuente oficial: www.ambiente.gob.sv
-      </a>
-    </div>
-  `;
-  
-  panel.innerHTML = html;
-}
-function mostrarDatosMARNMock(panel, errorMsg = null) {
-  const hoy = new Date();
-  const fechaFormateada = hoy.toLocaleDateString('es-SV', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  
-  const alertas = [
-    { fecha: fechaFormateada, mensaje: "Lluvias moderadas en zona central y occidental", probabilidad: "probabilidad 70%" },
-    { fecha: fechaFormateada, mensaje: "Recomendación: Monitorear cultivos de maíz por humedad", probabilidad: "" }
-  ];
-  
-  const boletin = {
-    fase: "Transición a invierno",
-    pronostico: "Inicio de canícula en 15 días",
-    temperatura: "24-32°C",
-    fecha: fechaFormateada
-  };
-  
-  let html = `
-    <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">🌊 ALERTAS ACTIVAS DEL MARN</h4>
-      ${alertas.map(a => `
-        <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
-          <span style="font-weight: 700;">• ${a.fecha}</span><br/>
-          <span style="color: #2c3e50;">${a.mensaje}</span>
-          ${a.probabilidad ? `<span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">${a.probabilidad}</span>` : ''}
-        </div>
-      `).join('')}
-    </div>
-    <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">📊 BOLETÍN CLIMATOLÓGICO (último)</h4>
-      <div style="margin-bottom: 0.4rem;">• <strong>Fase:</strong> ${boletin.fase}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Pronóstico:</strong> ${boletin.pronostico}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Temperatura esperada:</strong> ${boletin.temperatura}</div>
-      <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">📅 Actualizado: ${boletin.fecha}</div>
-    </div>
-    <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
-      <a href="https://www.ambiente.gob.sv/" target="_blank" rel="noopener" style="color: #1a5f7a; text-decoration: none; font-weight: 700;">
-        🔗 Fuente oficial: www.ambiente.gob.sv
-      </a>
-    </div>
-  `;
-  
-  panel.innerHTML = html;
-}
+        const { protocol, origin } = window.location;
+
+        if (protocol === "file:") {
+          mostrarDatosMARNMock(panel);
+          return;
+        }
+
+        const lat = selectedLocation.lat;
+        const lon = selectedLocation.lon;
+        const alt = 650;
+
+        const qs = new URLSearchParams({
+          latitud: String(lat),
+          longitud: String(lon),
+          altitud: String(alt),
+        });
+
+        const url =
+          `${origin}/api/v1/nacional/marn/resumen?${qs.toString()}`;
+
+        try {
+
+          const resp = await fetch(url);
+
+          if (!resp.ok) {
+            throw new Error(resp.statusText);
+          }
+
+          const data = await resp.json();
+
+          mostrarDatosMARNReal(panel, data);
+
+        } catch (err) {
+
+          mostrarDatosMARNMock(panel, err.message);
+        }
+      }
+
+      function mostrarDatosMARNReal(panel, data) {
+
+        const alertas = data.alertas || [];
+
+        const boletin = data.boletin || {};
+
+        let html = `
+          <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
+
+            <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">
+              🌊 ALERTAS ACTIVAS DEL MARN
+            </h4>
+
+            ${
+              alertas.length > 0
+                ? alertas
+                    .map(
+                      (a) => `
+                        <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
+
+                          <span style="font-weight: 700;">
+                            • ${a.fecha || "Fecha no disponible"}
+                          </span>
+
+                          <br/>
+
+                          <span style="color: #2c3e50;">
+                            ${a.mensaje || "Sin descripción"}
+                          </span>
+
+                          ${
+                            a.probabilidad
+                              ? `
+                                <span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">
+                                  ${a.probabilidad}
+                                </span>
+                              `
+                              : ""
+                          }
+
+                        </div>
+                      `
+                    )
+                    .join("")
+                : `
+                    <p style="color: #666;">
+                      No hay alertas activas en este momento
+                    </p>
+                  `
+            }
+
+          </div>
+
+          <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
+
+            <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">
+              📊 BOLETÍN CLIMATOLÓGICO (último)
+            </h4>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Fase:</strong>
+              ${boletin.fase || "Transición a invierno"}
+            </div>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Pronóstico:</strong>
+              ${
+                boletin.pronostico ||
+                "Inicio de canícula en 15 días"
+              }
+            </div>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Temperatura esperada:</strong>
+              ${boletin.temperatura || "24-32°C"}
+            </div>
+
+            ${
+              boletin.fecha
+                ? `
+                  <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                    📅 Actualizado: ${boletin.fecha}
+                  </div>
+                `
+                : ""
+            }
+
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
+
+            <a
+              href="https://www.ambiente.gob.sv/"
+              target="_blank"
+              rel="noopener"
+              style="color: #1a5f7a; text-decoration: none; font-weight: 700;"
+            >
+              🔗 Fuente oficial: www.ambiente.gob.sv
+            </a>
+
+          </div>
+        `;
+
+        panel.innerHTML = html;
+      }
+
+      function mostrarDatosMARNMock(panel) {
+
+        const hoy = new Date();
+
+        const fechaFormateada =
+          hoy.toLocaleDateString("es-SV", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          });
+
+        const alertas = [
+          {
+            fecha: fechaFormateada,
+            mensaje:
+              "Lluvias moderadas en zona central y occidental",
+            probabilidad: "probabilidad 70%",
+          },
+
+          {
+            fecha: fechaFormateada,
+            mensaje:
+              "Recomendación: Monitorear cultivos de maíz por humedad",
+            probabilidad: "",
+          },
+        ];
+
+        const boletin = {
+          fase: "Transición a invierno",
+          pronostico:
+            "Inicio de canícula en 15 días",
+          temperatura: "24-32°C",
+          fecha: fechaFormateada,
+        };
+
+        let html = `
+          <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
+
+            <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">
+              🌊 ALERTAS ACTIVAS DEL MARN
+            </h4>
+
+            ${alertas
+              .map(
+                (a) => `
+                  <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
+
+                    <span style="font-weight: 700;">
+                      • ${a.fecha}
+                    </span>
+
+                    <br/>
+
+                    <span style="color: #2c3e50;">
+                      ${a.mensaje}
+                    </span>
+
+                    ${
+                      a.probabilidad
+                        ? `
+                          <span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">
+                            ${a.probabilidad}
+                          </span>
+                        `
+                        : ""
+                    }
+
+                  </div>
+                `
+              )
+              .join("")}
+
+          </div>
+
+          <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
+
+            <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">
+              📊 BOLETÍN CLIMATOLÓGICO (último)
+            </h4>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Fase:</strong>
+              ${boletin.fase}
+            </div>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Pronóstico:</strong>
+              ${boletin.pronostico}
+            </div>
+
+            <div style="margin-bottom: 0.4rem;">
+              • <strong>Temperatura esperada:</strong>
+              ${boletin.temperatura}
+            </div>
+
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+              📅 Actualizado: ${boletin.fecha}
+            </div>
+
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
+
+            <a
+              href="https://www.ambiente.gob.sv/"
+              target="_blank"
+              rel="noopener"
+              style="color: #1a5f7a; text-decoration: none; font-weight: 700;"
+            >
+              🔗 Fuente oficial: www.ambiente.gob.sv
+            </a>
+
+          </div>
+        `;
+
+        panel.innerHTML = html;
+      }
 
       function refreshDashboard() {
-        document.getElementById("calcLocation").textContent =
-          `Calculado para: ${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lon.toFixed(4)}`;
+
+        document.getElementById(
+          "calcLocation"
+        ).textContent =
+          `Calculado para: ${selectedLocation.lat.toFixed(
+            4
+          )}, ${selectedLocation.lon.toFixed(4)}`;
+
         updateTodayCard();
         renderFocusDay();
         renderSummary();
         renderTable();
         renderChart();
+
         void loadMarnPortalSummary();
       }
 
       function setToggle(activeDays) {
+
         visibleDays = activeDays;
-        document.getElementById("btn7").classList.toggle("active", activeDays === 7);
-        document.getElementById("btn15").classList.toggle("active", activeDays === 15);
+
+        document
+          .getElementById("btn7")
+          .classList.toggle(
+            "active",
+            activeDays === 7
+          );
+
+        document
+          .getElementById("btn15")
+          .classList.toggle(
+            "active",
+            activeDays === 15
+          );
+
         renderTable();
         renderChart();
       }
 
       function initMap() {
+
         const lat = BASE_LAT;
         const lon = BASE_LON;
-        // Zoom algo mayor para ver bien el área metropolitana; el usuario puede alejar o mover el mapa.
-        const map = L.map("map", { zoomControl: true }).setView([lat, lon], 11);
-        const selectedPointEl = document.getElementById("selectedPoint");
+
+        const map = L.map("map", {
+          zoomControl: true,
+        }).setView([lat, lon], 11);
+
+        const selectedPointEl =
+          document.getElementById("selectedPoint");
 
         const elSalvadorBounds = L.latLngBounds(
-          [13.1, -90.2], // suroeste
-          [14.6, -87.6], // noreste
+          [13.1, -90.2],
+          [14.6, -87.6]
         );
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap contributors",
-          maxZoom: 19,
-        }).addTo(map);
+        L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution:
+              "&copy; OpenStreetMap contributors",
+            maxZoom: 19,
+          }
+        ).addTo(map);
 
         map.setMaxBounds(elSalvadorBounds);
-        map.on("drag", () => map.panInsideBounds(elSalvadorBounds, { animate: false }));
 
-        const marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+        map.on("drag", () =>
+          map.panInsideBounds(elSalvadorBounds, {
+            animate: false,
+          })
+        );
+
+        const marker = L.marker([lat, lon], {
+          draggable: true,
+        }).addTo(map);
+
         const areaCircle = L.circle([lat, lon], {
           radius: 14000,
           color: "#2f7d32",
@@ -948,44 +1481,100 @@ function mostrarDatosMARNMock(panel, errorMsg = null) {
         }).addTo(map);
 
         function updateMarkerInfo(newLat, newLon) {
+
           marker.setLatLng([newLat, newLon]);
+
           areaCircle.setLatLng([newLat, newLon]);
+
           marker
-            .bindTooltip(`Parcela seleccionada\nAltitud aprox: 650 msnm\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
-              direction: "top",
-              sticky: true,
-            })
+            .bindTooltip(
+              `Parcela seleccionada
+Altitud aprox: 650 msnm
+Lat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`,
+              {
+                direction: "top",
+                sticky: true,
+              }
+            )
             .openTooltip();
-          selectedPointEl.textContent = `Punto seleccionado: ${newLat.toFixed(4)}, ${newLon.toFixed(4)}`;
-          recalculateForecastForLocation(newLat, newLon);
+
+          selectedPointEl.textContent =
+            `Punto seleccionado: ${newLat.toFixed(
+              4
+            )}, ${newLon.toFixed(4)}`;
+
+          recalculateForecastForLocation(
+            newLat,
+            newLon
+          );
+
           refreshDashboard();
         }
 
         updateMarkerInfo(lat, lon);
 
         map.on("click", (event) => {
+
           const newLat = event.latlng.lat;
           const newLon = event.latlng.lng;
-          if (!elSalvadorBounds.contains([newLat, newLon])) return;
+
+          if (
+            !elSalvadorBounds.contains([
+              newLat,
+              newLon,
+            ])
+          ) {
+            return;
+          }
+
           updateMarkerInfo(newLat, newLon);
         });
 
         marker.on("dragend", (event) => {
-          const { lat: newLat, lng: newLon } = event.target.getLatLng();
-          if (!elSalvadorBounds.contains([newLat, newLon])) {
-            updateMarkerInfo(BASE_LAT, BASE_LON);
+
+          const {
+            lat: newLat,
+            lng: newLon,
+          } = event.target.getLatLng();
+
+          if (
+            !elSalvadorBounds.contains([
+              newLat,
+              newLon,
+            ])
+          ) {
+            updateMarkerInfo(
+              BASE_LAT,
+              BASE_LON
+            );
             return;
           }
+
           updateMarkerInfo(newLat, newLon);
         });
       }
 
-      document.getElementById("btn7").addEventListener("click", () => setToggle(7));
-      document.getElementById("btn15").addEventListener("click", () => setToggle(15));
+      document
+        .getElementById("btn7")
+        .addEventListener("click", () =>
+          setToggle(7)
+        );
 
-      recalculateForecastForLocation(BASE_LAT, BASE_LON);
+      document
+        .getElementById("btn15")
+        .addEventListener("click", () =>
+          setToggle(15)
+        );
+
+      recalculateForecastForLocation(
+        BASE_LAT,
+        BASE_LON
+      );
+
       refreshDashboard();
+
       initMap();
     </script>
   </body>
 </html>
+```
