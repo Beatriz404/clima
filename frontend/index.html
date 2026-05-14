@@ -378,11 +378,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      // Punto de referencia por defecto: San Salvador (mapa + ajuste de pronóstico vs esta ubicación).
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
 
-      // Patrón de 15 días (día 1 = hoy del visitante). Las fechas se asignan en el navegador con la fecha local.
       const FORECAST_PATTERN = [
         { temp: 26.6, rain: 0, humidity: 65, max: 34, min: 19 },
         { temp: 27.1, rain: 0, humidity: 60, max: 34.8, min: 19.4 },
@@ -406,7 +404,6 @@
       let forecastChart;
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON };
 
-      /** Fecha local del visitante en formato YYYY-MM-DD (zona horaria del navegador). */
       function localISODate(date = new Date()) {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -414,7 +411,6 @@
         return `${y}-${m}-${d}`;
       }
 
-      /** Suma días a una fecha YYYY-MM-DD en calendario local (cruza meses correctamente). */
       function addDaysToISODate(isoDate, dayOffset) {
         const [y, mo, da] = isoDate.split("-").map(Number);
         const dt = new Date(y, mo - 1, da + dayOffset);
@@ -440,8 +436,6 @@
         const latDelta = lat - BASE_LAT;
         const lonDelta = lon - BASE_LON;
 
-        // Ajuste simplificado por ubicación: representa cambios de microclima dentro del país.
-        // Se aumenta amplitud para que el cambio sea visible al usuario en diferentes zonas.
         const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
         const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
         const humidityShift = clamp(latDelta * 16 + lonDelta * -14, -18, 22);
@@ -468,10 +462,7 @@
       }
 
       function evaluateTrafficLight(day) {
-        // Lógica del semáforo:
-        // 1) Rojo si hay condición crítica: lluvia >15mm, temp extrema (<18 o >35) o riesgo alto.
-        // 2) Amarillo si no es rojo y hay precaución: lluvia 5-15mm o humedad fuera de 50-85%.
-        // 3) Verde cuando cumple ventana recomendada de siembra.
+       
         const highRisk = day.rain >= 25 || day.humidity >= 90;
         if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
           return {
