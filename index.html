@@ -1,949 +1,430 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Panel Agrícola | El Salvador</title>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Marco Teórico: Plataformas Digitales y Metodologías Docentes (APA 7ª ed.)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --fondo: #f4f1e6;
-        --superficie: #fffdf7;
-        --verde: #2f7d32;
-        --verde-claro: #e6f4e4;
-        --amarillo: #f0b429;
-        --amarillo-claro: #fff3d7;
-        --rojo: #c0392b;
-        --rojo-claro: #fde2df;
-        --cafe: #70543e;
-        --texto: #243026;
-        --sombra: 0 8px 18px rgba(53, 45, 37, 0.12);
-        --borde: #d6c7ad;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        font-family: Arial, Helvetica, sans-serif;
-        background: linear-gradient(180deg, #f4f1e6 0%, #efe7d4 100%);
-        color: var(--texto);
-      }
-
-      .layout {
-        max-width: 1220px;
-        margin: 0 auto;
-        padding: 1rem;
-        display: grid;
-        gap: 1rem;
-      }
-
-      .card {
-        background: var(--superficie);
-        border: 1px solid var(--borde);
-        border-radius: 14px;
-        box-shadow: var(--sombra);
-      }
-
-      .header {
-        padding: 1rem 1.25rem;
-      }
-
-      .header h1 {
-        margin: 0 0 0.3rem;
-        color: #234b1d;
-      }
-
-      .header p {
-        margin: 0;
-        color: #5e4b3a;
-      }
-
-      .today {
-        padding: 1rem 1.25rem 1.25rem;
-      }
-
-      .today-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 0.7rem;
-      }
-
-      .today-title h2 {
-        margin: 0;
-        color: #1d5024;
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 999px;
-        font-size: 0.9rem;
-        font-weight: 700;
-      }
-
-      .badge.green {
-        background: var(--verde-claro);
-        color: var(--verde);
-      }
-      .badge.yellow {
-        background: var(--amarillo-claro);
-        color: #82540f;
-      }
-      .badge.red {
-        background: var(--rojo-claro);
-        color: var(--rojo);
-      }
-
-      .today-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(120px, 1fr));
-        gap: 0.7rem;
-      }
-
-      .metric {
-        background: #fff;
-        border: 1px solid #e5d6bf;
-        border-radius: 10px;
-        padding: 0.6rem;
-      }
-
-      .metric .label {
-        color: #6f5a46;
-        font-size: 0.85rem;
-      }
-
-      .metric .value {
-        margin-top: 0.25rem;
-        font-weight: 700;
-        font-size: 1.15rem;
-      }
-
-      .recommendation {
-        margin-top: 0.9rem;
-        font-weight: 700;
-        color: #1f5c2d;
-      }
-
-      .alerts {
-        margin-top: 0.55rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
-
-      .alert-pill {
-        padding: 0.3rem 0.55rem;
-        border-radius: 999px;
-        font-size: 0.84rem;
-        border: 1px solid transparent;
-      }
-
-      .alert-pill.warn {
-        background: #fff1d2;
-        border-color: #f4cc71;
-        color: #7f5a0e;
-      }
-
-      .alert-pill.danger {
-        background: #fde4e1;
-        border-color: #f1a29b;
-        color: #a52d22;
-      }
-
-      .toolbar {
-        padding: 0.9rem 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        flex-wrap: wrap;
-      }
-
-      .calc-location {
-        margin-left: auto;
-        font-size: 0.9rem;
-        color: #5f4c38;
-        font-weight: 700;
-      }
-
-      .toggle-btn {
-        border: 1px solid #9e8a72;
-        background: #f5eee0;
-        color: #4e3f31;
-        border-radius: 8px;
-        padding: 0.5rem 0.8rem;
-        font-weight: 700;
-        cursor: pointer;
-      }
-
-      .toggle-btn.active {
-        background: #3f7b2d;
-        color: #fff;
-        border-color: #2f6322;
-      }
-
-      .table-wrap {
-        padding: 0 1.25rem 1rem;
-        overflow-x: auto;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 760px;
-      }
-
-      th,
-      td {
-        text-align: left;
-        border-bottom: 1px solid #eadfcb;
-        padding: 0.55rem;
-        font-size: 0.93rem;
-      }
-
-      th {
-        background: #f8f1e3;
-        color: #5f4d39;
-      }
-
-      .signal {
-        font-size: 1.18rem;
-      }
-
-      .highlight-day {
-        background: #fff1e1;
-      }
-
-      .highlight-day td {
-        font-weight: 700;
-      }
-
-      .chart-section,
-      .summary-section,
-      .map-section {
-        padding: 1rem 1.25rem 1.25rem;
-      }
-
-      .chart-title,
-      .summary-title,
-      .map-title {
-        margin: 0 0 0.7rem;
-        color: #274f1f;
-      }
-
-      .chart-area {
-        height: 320px;
-      }
-
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
-        gap: 0.9rem;
-      }
-
-      .summary-item {
-        background: #fff;
-        border: 1px solid #dfd0b8;
-        border-radius: 10px;
-        padding: 0.7rem;
-      }
-
-      .summary-item h4 {
-        margin: 0 0 0.4rem;
-        color: #5c4733;
-      }
-
-      .summary-item p,
-      .summary-item ul {
-        margin: 0;
-      }
-
-      .summary-item ul {
-        padding-left: 1rem;
-      }
-
-      #map {
-        width: 100%;
-        height: 430px;
-        border-radius: 12px;
-        border: 1px solid #d8c6a8;
-        box-shadow: inset 0 0 0 1px #fff;
-      }
-
-      .map-note {
-        margin-top: 0.5rem;
-        color: #5f4c38;
-        font-size: 0.9rem;
-      }
-
-      .map-selection {
-        margin-top: 0.5rem;
-        font-size: 0.92rem;
-        color: #3e3428;
-        font-weight: 700;
-      }
-
-      .marn-card .marn-hint {
-        color: #5f4c38;
-        font-size: 0.92rem;
-        margin: 0;
-      }
-      .marn-card .marn-error {
-        color: #8b2e22;
-        font-size: 0.92rem;
-      }
-      .marn-card ul {
-        margin: 0.5rem 0 0 1.1rem;
-        padding: 0;
-      }
-      .marn-card li {
-        margin: 0.4rem 0;
-        font-size: 0.92rem;
-        line-height: 1.35;
-      }
-      .marn-meta {
-        font-size: 0.84rem;
-        color: #5e4b3a;
-        margin-top: 0.65rem;
-        padding-top: 0.65rem;
-        border-top: 1px solid #eadfcb;
-      }
-
-      @media (max-width: 900px) {
-        .today-grid {
-          grid-template-columns: repeat(2, minmax(120px, 1fr));
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .summary-grid {
-          grid-template-columns: 1fr;
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
         }
-        .chart-area {
-          height: 290px;
+
+        .presentation-container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.3);
+            overflow: hidden;
+            padding: 1.5rem 2rem 2rem;
+            transition: all 0.3s;
         }
-      }
+
+        .presentation-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #2c3e66;
+            padding-bottom: 1rem;
+        }
+        .presentation-header h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1a2a4f, #2c5282);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .presentation-header p {
+            color: #2d3748;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .slider-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 0.8rem;
+        }
+        .nav-btn {
+            background: #2c3e66;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-btn:hover {
+            background: #1a2a4f;
+            transform: scale(0.97);
+        }
+        .slide-indicator {
+            background: rgba(44,62,102,0.1);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.9rem;
+        }
+        .slide-indicator span {
+            font-weight: 800;
+            color: #1e3a8a;
+        }
+
+        .slide-wrapper {
+            min-height: 560px;
+            transition: all 0.3s ease;
+        }
+        .slide-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.8rem 2rem;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            height: 100%;
+            animation: fadeSlide 0.4s ease-out;
+        }
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .slide-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            border-left: 6px solid #2c5282;
+            padding-left: 1rem;
+            margin-bottom: 1.2rem;
+            color: #0f2b3d;
+        }
+        .slide-title i {
+            color: #2c5282;
+            margin-right: 0.6rem;
+        }
+        .slide-content {
+            color: #2d3e50;
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+        .slide-content h3 {
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            color: #1e4a76;
+            font-size: 1.2rem;
+        }
+        .slide-content p, .slide-content li {
+            margin-bottom: 0.75rem;
+            text-align: justify;
+        }
+        .slide-content ul, .slide-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+        .cita {
+            background: #eff3f8;
+            border-left: 5px solid #2c5282;
+            padding: 0.8rem 1.2rem;
+            margin: 1rem 0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+        .cita i, .apa-ref i {
+            margin-right: 0.5rem;
+            color: #2c5282;
+        }
+        .apa-ref {
+            font-size: 0.8rem;
+            margin-bottom: 0.4rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .apa-ref a {
+            color: #1e4a76;
+            text-decoration: none;
+            border-bottom: 1px dotted #1e4a76;
+        }
+        .apa-ref a:hover {
+            color: #0f2b3d;
+            border-bottom: 1px solid #0f2b3d;
+        }
+        .badge-autor {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+        .table-met {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8fafc;
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 0.8rem 0;
+        }
+        .table-met th, .table-met td {
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        .table-met th {
+            background: #e2e8f0;
+            font-weight: 700;
+        }
+        .bibliography {
+            margin-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 1rem;
+        }
+        .bibliography h4 {
+            color: #1e3a5f;
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+        }
+        .footnote {
+            font-size: 0.75rem;
+            margin-top: 1rem;
+            color: #4a5568;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 0.8rem;
+        }
+        hr {
+            margin: 1rem 0;
+        }
+        .doi-link {
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        @media (max-width: 700px) {
+            .presentation-container {
+                padding: 1rem;
+            }
+            .slide-card {
+                padding: 1.2rem;
+            }
+            .slide-title {
+                font-size: 1.4rem;
+            }
+            .nav-btn {
+                padding: 0.4rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
     </style>
-  </head>
-  <body>
-    <main class="layout">
-      <section class="card header">
-        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
-        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
-        <p class="marn-meta" style="border-top: none; padding-top: 0.35rem; margin-top: 0.5rem">
-          Realiza lectura automática del <strong>portal público del MARN</strong> (<a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a>) vía la API del mismo sistema cuando accede por el servidor
-        </p>
-      </section>
+</head>
+<body>
+<div class="presentation-container">
+    <div class="presentation-header">
+        <h1><i class="fas fa-chalkboard-user"></i> Marco Teórico: Plataformas Digitales y Metodologías Docentes</h1>
+        <p>Orígenes de Internet · Evolución de las plataformas · Enseñanza mediada por tecnología · Citas y referencias con enlaces APA 7ª ed.</p>
+    </div>
 
-      <section class="card today">
-        <div class="today-title">
-          <h2 id="todayTitle">Hoy 🌤️</h2>
-          <span id="todayBadge" class="badge">Cargando...</span>
+    <div class="slider-controls">
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevSlideBtn"><i class="fas fa-chevron-left"></i> Anterior</button>
+            <button class="nav-btn" id="nextSlideBtn">Siguiente <i class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="today-grid" id="todayMetrics"></div>
-        <p id="todayRecommendation" class="recommendation"></p>
-        <div id="todayAlerts" class="alerts"></div>
-      </section>
-
-      <section class="card">
-        <div class="toolbar">
-          <strong>Pronóstico:</strong>
-          <button id="btn7" class="toggle-btn active" type="button">7 días</button>
-          <button id="btn15" class="toggle-btn" type="button">15 días</button>
-          <span id="calcLocation" class="calc-location">Calculado para: San Salvador (por defecto)</span>
+        <div class="slide-indicator">
+            Diapositiva <span id="currentSlideSpan">1</span> / <span id="totalSlidesSpan">6</span>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>🌡️ Temp media</th>
-                <th>🌧️ Lluvia (mm)</th>
-                <th>💧 Humedad</th>
-                <th>Semáforo</th>
-                <th>Nota agrícola</th>
-              </tr>
-            </thead>
-            <tbody id="forecastBody"></tbody>
-          </table>
-        </div>
-      </section>
+    </div>
 
-      <section class="card chart-section">
-        <h3 class="chart-title">Tendencia 15 días: temperatura y lluvia</h3>
-        <div class="chart-area">
-          <canvas id="forecastChart"></canvas>
-        </div>
-      </section>
+    <div class="slide-wrapper" id="slideWrapper"></div>
+    <div class="footnote">
+        <i class="fas fa-book-open"></i> Marco construido con fuentes académicas · Citas en formato APA 7ª ed. con enlaces a documentos originales (DOI, ERIC, web).
+    </div>
+</div>
 
-      <section class="card summary-section marn-card">
-        <h3 class="summary-title">Portal MARN El Salvador</h3>
-        <p class="map-note">
-          Enlaces y textos detectados en el sitio oficial
-          <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a> (resumen técnico; las cifras de temperatura y lluvia de arriba siguen siendo el panel local/Open-Meteo cuando use la API).
-        </p>
-        <div id="marnPanel">
-          <p class="marn-hint">Cargando resumen del portal MARN…</p>
-        </div>
-      </section>
-
-      <section class="card summary-section">
-        <h3 class="summary-title" id="focusSectionTitle">Lectura rápida del último día del pronóstico</h3>
-        <div class="summary-grid" id="focusDayGrid"></div>
-      </section>
-
-      <section class="card summary-section">
-        <h3 class="summary-title">Resumen ejecutivo para agricultor</h3>
-        <div class="summary-grid" id="summaryGrid"></div>
-      </section>
-
-      <section class="card map-section">
-        <h3 class="map-title">Mapa de referencia de parcela</h3>
-        <div id="map"></div>
-        <p class="map-note">
-          Por defecto: centro de San Salvador. Puede arrastrar el marcador o hacer clic en el mapa para otra parcela en El Salvador.
-        </p>
-        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
-      </section>
-    </main>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-      const BASE_LAT = 13.6929;
-      const BASE_LON = -89.2182;
-
-      const FORECAST_PATTERN = [
-        { temp: 26.6, rain: 0, humidity: 65, max: 34, min: 19 },
-        { temp: 27.1, rain: 0, humidity: 60, max: 34.8, min: 19.4 },
-        { temp: 28.4, rain: 2, humidity: 58, max: 35, min: 20 },
-        { temp: 27.8, rain: 15, humidity: 82, max: 33, min: 21 },
-        { temp: 26.2, rain: 25, humidity: 88, max: 31, min: 20 },
-        { temp: 25.5, rain: 8, humidity: 75, max: 30, min: 19 },
-        { temp: 26.9, rain: 0, humidity: 62, max: 33, min: 18 },
-        { temp: 27.0, rain: 6, humidity: 70, max: 32, min: 20 },
-        { temp: 26.7, rain: 10, humidity: 76, max: 31.5, min: 20.3 },
-        { temp: 26.4, rain: 14, humidity: 80, max: 31, min: 20.1 },
-        { temp: 26.1, rain: 18, humidity: 84, max: 30.4, min: 19.8 },
-        { temp: 25.8, rain: 22, humidity: 87, max: 30, min: 19.5 },
-        { temp: 25.4, rain: 28, humidity: 89, max: 29.5, min: 19.2 },
-        { temp: 25.1, rain: 34, humidity: 91, max: 29, min: 19 },
-        { temp: 24.9, rain: 38, humidity: 92, max: 28.7, min: 18.9 },
-      ];
-
-      let forecastData = [];
-      let visibleDays = 7;
-      let forecastChart;
-      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON };
-
-      function localISODate(date = new Date()) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, "0");
-        const d = String(date.getDate()).padStart(2, "0");
-        return `${y}-${m}-${d}`;
-      }
-
-      function addDaysToISODate(isoDate, dayOffset) {
-        const [y, mo, da] = isoDate.split("-").map(Number);
-        const dt = new Date(y, mo - 1, da + dayOffset);
-        return localISODate(dt);
-      }
-
-      function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
-
-      function round1(value) {
-        return Math.round(value * 10) / 10;
-      }
-
-      function recalculateForecastForLocation(lat, lon) {
-        selectedLocation = { lat, lon };
-        const anchorIso = localISODate(new Date());
-        const datedBase = FORECAST_PATTERN.map((row, index) => ({
-          ...row,
-          date: addDaysToISODate(anchorIso, index),
-        }));
-
-        const latDelta = lat - BASE_LAT;
-        const lonDelta = lon - BASE_LON;
-
-        const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
-        const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
-        const humidityShift = clamp(latDelta * 16 + lonDelta * -14, -18, 22);
-
-        forecastData = datedBase.map((baseDay, index) => {
-          const rainByDayFactor = index * 0.45;
-          const extraRainCooling = baseDay.rain > 18 ? 0.4 : 0;
-          const adjustedTemp = clamp(baseDay.temp + tempShift - extraRainCooling, 18, 35);
-          const adjustedRain = clamp(baseDay.rain + rainShift + rainByDayFactor, 0, 40);
-          const adjustedHumidity = clamp(baseDay.humidity + humidityShift + index * 0.2, 45, 95);
-          const diurnalRange = clamp(baseDay.max - baseDay.min, 8, 15);
-          const adjustedMax = clamp(adjustedTemp + diurnalRange / 2, 22, 37);
-          const adjustedMin = clamp(adjustedTemp - diurnalRange / 2, 16, 28);
-
-          return {
-            ...baseDay,
-            temp: round1(adjustedTemp),
-            rain: round1(adjustedRain),
-            humidity: Math.round(adjustedHumidity),
-            max: round1(adjustedMax),
-            min: round1(adjustedMin),
-          };
-        });
-      }
-
-      function evaluateTrafficLight(day) {
-      
-        const highRisk = day.rain >= 25 || day.humidity >= 90;
-        if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
-          return {
-            color: "red",
-            icon: "🔴",
-            label: "No sembrar",
-            note: "Riesgo alto por exceso de lluvia o condición extrema.",
-          };
+<script>
+    const slides = [
+        {
+            title: "1. Orígenes de Internet: Base estructural de la educación digital",
+            content: `
+                <p>Antecedentes técnicos: En 1958, Estados Unidos crea la ARPA tras el lanzamiento del Sputnik I. En 1961, Leonard Kleinrock desde el MIT publica la teoría de conmutación de paquetes, y en 1969 se logró la primera conexión entre UCLA y Stanford, naciendo Arpanet (Kleinrock, 1961; Baran, 1962).</p>
+                <p>En 1983, el Departamento de Defensa adopta el protocolo TCP/IP, y la red pasa a denominarse definitivamente Internet. En 1989, Tim Berners-Lee incorporó HTML, HTTP y el navegador web, abriendo la red al público en 1991 (Berners-Lee, 1989).</p>
+                <div class="cita"><i class="fas fa-quote-left"></i> Otto Peters (1983) planteó que "la educación a distancia es una forma industrial de enseñar y aprender, racionalizada mediante la división del trabajo y el uso extensivo de medios técnicos" (Peters, 1983, citado por <a href="https://eric.ed.gov/?id=ED389924" target="_blank">Keegan, 1994</a>).</div>
+                <p>Peters advierte que la transición hacia la era postindustrial exige tecnologías individualizadas y toma descentralizada de decisiones <a href="https://eric.ed.gov/?id=ED389924" target="_blank">(Keegan, 1994)</a>.</p>
+                <div class="apa-ref"><i class="fas fa-external-link-alt"></i> <strong>Referencia APA:</strong> Keegan, D. (Ed.). (1994). <em>Otto Peters on distance education: The industrialization of teaching and learning</em>. Routledge. <a href="https://eric.ed.gov/?id=ED389924" target="_blank">https://eric.ed.gov/?id=ED389924</a></div>
+                <h3><i class="fas fa-microchip"></i> Hitos fundacionales documentados</h3>
+                <ul>
+                    <li>1969: Arpanet (primera red de conmutación de paquetes).</li>
+                    <li>1983: Estandarización TCP/IP → Internet global.</li>
+                    <li>1991: World Wide Web pública.</li>
+                </ul>
+            `
+        },
+        {
+            title: "2. Surgimiento de las Plataformas Digitales: LMS, VLEs y MOOC",
+            content: `
+                <p>Una plataforma digital de aprendizaje (LMS) es un entorno tecnológico para gestionar, distribuir y facilitar procesos de enseñanza-aprendizaje en virtualidad (Coyago et al., 2017).</p>
+                <h3>Hitos documentados en la literatura</h3>
+                <ul>
+                    <li>1963: TICCIT (<a href="https://en.wikipedia.org/wiki/TICCIT" target="_blank">Time-shared, Interactive, Computer-Controlled Information Television</a>) – sistema de enseñanza asistida por computadora (Wikipedia, 2024).</li>
+                    <li>1969: PLATO (Programmed Logic for Automated Teaching Operations) en la Universidad de Illinois, precursor de los sistemas comunitarios en línea como Khan Academy y Coursera (<a href="http://msl.cs.uiuc.edu/vr/node30.html" target="_blank">LaValle, 2019</a>).</li>
+                    <li>1977: Primeros Entornos Virtuales de Aprendizaje (VLEs) universitarios.</li>
+                    <li>1997: Lanzamiento de Blackboard – plataforma comercial líder (<a href="https://ecampusontario.pressbooks.pub/technologieprogrammedetudes/chapter/blackboard-learn-la-technologie-dans-le-programme-detude/" target="_blank">Bradford et al., 2007, citado en eCampusOntario, 2023</a>).</li>
+                    <li>2001: MIT OpenCourseWare, acceso gratuito a materiales de cursos (<a href="https://en.wikipedia.org/wiki/MIT_OpenCourseWare" target="_blank">MIT, 2001</a>).</li>
+                    <li>2003: Expansión global de Moodle (código abierto) basado en construccionismo social (<a href="https://www.learntechlib.org/p/13739/" target="_blank">Dougiamas & Taylor, 2003</a>).</li>
+                    <li>2008: Popularización del concepto MOOC; los primeros MOOCs surgieron en 2008 en Canadá y se expandieron desde 2011 (<a href="http://media.people.com.cn/BIG5/n1/2016/0526/c404394-28382396.html" target="_blank">Song, 2016</a>).</li>
+                </ul>
+                <div class="cita"><i class="fas fa-quote-left"></i> Michael Moore (1993) teorizó la "distancia transaccional" como un espacio psicológico y de comunicación entre el docente y el estudiante, que depende del diálogo y la estructura del curso (<a href="https://eric.ed.gov/?id=ED404449" target="_blank">Moore, 1993</a>).</div>
+                <div class="apa-ref"><i class="fas fa-external-link-alt"></i> <strong>Referencias APA:</strong><br>
+                Moore, M. G. (1993). Theory of transactional distance. En D. Keegan (Ed.), <em>Theoretical principles of distance education</em> (pp. 22-38). Routledge. <a href="https://eric.ed.gov/?id=ED404449" target="_blank">https://eric.ed.gov/?id=ED404449</a><br>
+                Dougiamas, M., & Taylor, P. (2003). Moodle: Using learning communities to create an open source course management system. <em>Proceedings of ED-MEDIA 2003</em>, 171-178. <a href="https://www.learntechlib.org/p/13739/" target="_blank">https://www.learntechlib.org/p/13739/</a>
+                </div>
+            `
+        },
+        {
+            title: "3. Avance de las plataformas: Personalización e Inteligencia Artificial",
+            content: `
+                <p>Las plataformas actuales evolucionan hacia la personalización mediante estilos de aprendizaje e Inteligencia Artificial (aprendizaje adaptativo). Investigaciones señalan que cada estudiante tiene procesos cognitivos, afectivos y fisiológicos distintos (Rieh et al., 2016).</p>
+                <p>La pandemia de COVID-19 (2020) aceleró drásticamente la adopción de modelos híbridos.</p>
+                <h3>Inteligencia Artificial y analíticas de aprendizaje</h3>
+                <ul>
+                    <li>Identificación de patrones de comportamiento y estilos.</li>
+                    <li>Recomendación personalizada de contenidos.</li>
+                    <li>Retroalimentación automática y evaluación adaptativa.</li>
+                </ul>
+                <div class="cita"><i class="fas fa-chart-line"></i> Tal como documenta la literatura, desde 2012 Google Workspace for Education y Microsoft Teams redefinen la colaboración en el aula, y la Inteligencia Artificial se integra para personalizar la enseñanza (Gallegos Montalvo et al., 2022).</div>
+                <div class="apa-ref"><i class="fas fa-external-link-alt"></i> <strong>Referencia APA:</strong> Gallegos Montalvo, H. E., et al. (2022). Plataformas Digitales de Aprendizaje en las Competencias Profesionales de Docentes. <em>Journal of Business Review</em>, 10(1).</div>
+                <div class="cita"><i class="fas fa-robot"></i> PLATO, desarrollado en la Universidad de Illinois, incluyó tablones de mensajes, mensajería instantánea, salas de chat y emoticonos, siendo precursor de los sistemas de aprendizaje comunitario actuales (<a href="http://msl.cs.uiuc.edu/vr/node30.html" target="_blank">LaValle, 2019</a>).</div>
+            `
+        },
+        {
+            title: "4. Metodologías docentes: Autonomía del estudiante y reintegración pedagógica (Wedemeyer y Keegan)",
+            content: `
+                <p>Charles Wedemeyer (1981) defendió la "teoría del estudio independiente", otorgando al estudiante libertad, responsabilidad y control, pero sin obviar el seguimiento y diagnóstico del avance. Wedemeyer influyó decisivamente en la creación de la Open University británica (<a href="https://webarchiveweb.wayback.bac-lac.canada.ca/web/20170114035119/https://en.wikipedia.org/wiki/Charles_Wedemeyer" target="_blank">Wedemeyer, 1981; Burton, 2010</a>).</p>
+                <table class="table-met">
+                    <tr><th>Principio Wedemeyer (1981)</th><th>Aplicación actual en plataformas digitales</th></tr>
+                    <tr><td>Funcionar en cualquier lugar</td><td>Acceso móvil, aprendizaje ubicuo.</td></tr>
+                    <tr><td>Centrar la responsabilidad en el estudiante</td><td>Metodologías activas, ABP, autogestión.</td></tr>
+                    <tr><td>Múltiples opciones y ritmo personal</td><td>Recursos asíncronos, itinerarios adaptativos.</td></tr>
+                    <tr><td>Combinar herramientas para optimización</td><td>Entornos virtuales integrados + IA.</td></tr>
+                </table>
+                <p>Desmond Keegan (1993) formuló la "Teoría de la reintegración de los actos de enseñanza y aprendizaje": la educación a distancia debe ser creativa para lograr intersubjetividad docente-estudiante, favoreciendo el diálogo bidireccional (<a href="https://eric.ed.gov/?id=ED404449" target="_blank">Keegan, 1993</a>).</p>
+                <div class="apa-ref"><i class="fas fa-external-link-alt"></i> <strong>Referencias APA:</strong><br>
+                Wedemeyer, C. A. (1981). <em>Learning at the back door: Reflections on non-traditional learning in the lifespan</em>. University of Wisconsin Press. <a href="https://webarchiveweb.wayback.bac-lac.canada.ca/web/20170114035119/https://en.wikipedia.org/wiki/Charles_Wedemeyer" target="_blank">https://en.wikipedia.org/wiki/Charles_Wedemeyer</a><br>
+                Keegan, D. (1993). Reintegration of the teaching acts. En D. Keegan (Ed.), <em>Theoretical principles of distance education</em>. Routledge. <a href="https://eric.ed.gov/?id=ED404449" target="_blank">https://eric.ed.gov/?id=ED404449</a>
+                </div>
+            `
+        },
+        {
+            title: "5. Estrategias docentes en entornos virtuales universitarios",
+            content: `
+                <p>Estudios recientes indican que la enseñanza virtual modifica sustancialmente el rol del docente: se requiere diseñar experiencias de aprendizaje, facilitar interacciones, gestionar recursos digitales y evaluar en formato continuo (Gallegos Montalvo et al., 2022).</p>
+                <h3><i class="fas fa-chalkboard"></i> Competencias específicas del docente en plataformas digitales</h3>
+                <ul>
+                    <li>Diseño pedagógico tecnológico: estructurar entornos de aprendizaje en LMS.</li>
+                    <li>Moderación y dinamización: promover foros, debates y trabajo colaborativo.</li>
+                    <li>Evaluación formativa con analíticas: usar datos de seguimiento para retroalimentar.</li>
+                    <li>Adaptación metodológica: integrar IA, videotutoriales y rúbricas interactivas.</li>
+                </ul>
+                <div class="cita">💡 Ejemplo de buena práctica: Aula invertida con Moodle: los estudiantes revisan vídeos y lecturas antes de la clase sincrónica (Zoom/Teams) y el tiempo presencial se dedica a resolución de casos y debates.</div>
+                <p>La pandemia (COVID-19) evidenció la necesidad de formación intensiva en competencias digitales docentes; se consolidaron los modelos híbridos y el uso de recursos abiertos (Gallegos et al., 2022).</p>
+                <div class="apa-ref"><i class="fas fa-external-link-alt"></i> <strong>Referencia:</strong> Gallegos Montalvo, H. E., Coyago, J., et al. (2022). Plataformas Digitales de Aprendizaje en las Competencias Profesionales de Docentes. <em>Journal of Business Review</em>, 10(1).</div>
+            `
+        },
+        {
+            title: "6. Conclusiones y referencias bibliográficas",
+            content: `
+                <p>Conclusiones integradoras: El marco teórico evidencia que Internet (desde Arpanet y TCP/IP) proporcionó la infraestructura para el desarrollo de plataformas digitales. Autores como Peters (industrialización), Wedemeyer (estudio independiente), Moore (distancia transaccional) y Keegan (reintegración) sentaron bases conceptuales clave.</p>
+                <p>Las plataformas han evolucionado de repositorios pasivos a entornos adaptativos con IA (aprendizaje personalizado). Las metodologías docentes transitan desde modelos transmisivos hacia enfoques centrados en el estudiante.</p>
+                <div class="bibliography">
+                <h4><i class="fas fa-book"></i> Referencias bibliográficas completas (APA 7ª ed.)</h4>
+                <div class="apa-ref">Bradford, P., Porciello, M., Balkon, N., & Backus, D. (2007). The Blackboard Learning System: The be all and end all in educational instruction? <em>Journal of Educational Technology Systems</em>, 35(3), 301-314. <a href="https://ecampusontario.pressbooks.pub/technologieprogrammedetudes/chapter/blackboard-learn-la-technologie-dans-le-programme-detude/" target="_blank">https://ecampusontario.pressbooks.pub/...</a></div>
+                <div class="apa-ref">Burton, G. (2010). Opening the Great Gate at "the Palace of Learning": Charles A. Wedemeyer's Pioneering Role as Champion of the Independent Learner. <em>Vitae Scholasticae</em>, 27(1).</div>
+                <div class="apa-ref">Coyago, J., et al. (2017). Desarrollos requeridos en las plataformas virtuales de aprendizaje. <em>Revista Venezolana de Gerencia</em>.</div>
+                <div class="apa-ref">Dougiamas, M., & Taylor, P. (2003). Moodle: Using learning communities to create an open source course management system. <em>EdMedia + Innovate Learning</em>, 171-178. <a href="https://www.learntechlib.org/p/13739/" target="_blank">https://www.learntechlib.org/p/13739/</a></div>
+                <div class="apa-ref">Gallegos Montalvo, H. E., et al. (2022). Plataformas Digitales de Aprendizaje en las Competencias Profesionales de Docentes. <em>Journal of Business Review</em>, 10(1).</div>
+                <div class="apa-ref">Keegan, D. (Ed.). (1993). <em>Theoretical principles of distance education</em>. Routledge. <a href="https://eric.ed.gov/?id=ED404449" target="_blank">https://eric.ed.gov/?id=ED404449</a></div>
+                <div class="apa-ref">Keegan, D. (Ed.). (1994). <em>Otto Peters on distance education: The industrialization of teaching and learning</em>. Routledge. <a href="https://eric.ed.gov/?id=ED389924" target="_blank">https://eric.ed.gov/?id=ED389924</a></div>
+                <div class="apa-ref">LaValle, S. M. (2019). Bringing people together. En <em>Virtual reality</em>. <a href="http://msl.cs.uiuc.edu/vr/node30.html" target="_blank">http://msl.cs.uiuc.edu/vr/node30.html</a></div>
+                <div class="apa-ref">MIT OpenCourseWare. (2001). <em>MIT OpenCourseWare: Free online course materials</em>. <a href="https://en.wikipedia.org/wiki/MIT_OpenCourseWare" target="_blank">https://en.wikipedia.org/wiki/MIT_OpenCourseWare</a></div>
+                <div class="apa-ref">Moore, M. G. (1993). Theory of transactional distance. En D. Keegan (Ed.), <em>Theoretical principles of distance education</em>. Routledge. <a href="https://eric.ed.gov/?id=ED404449" target="_blank">https://eric.ed.gov/?id=ED404449</a></div>
+                <div class="apa-ref">Song, S. (2016). [Review of MOOC development in China and the US]. <em>People's Daily Online / 今传媒</em>. <a href="http://media.people.com.cn/BIG5/n1/2016/0526/c404394-28382396.html" target="_blank">http://media.people.com.cn/...</a></div>
+                <div class="apa-ref">Wedemeyer, C. A. (1981). <em>Learning at the back door: Reflections on non-traditional learning in the lifespan</em>. University of Wisconsin Press.</div>
+                <div class="apa-ref">Wikipedia. (2024). TICCIT. <a href="https://en.wikipedia.org/wiki/TICCIT" target="_blank">https://en.wikipedia.org/wiki/TICCIT</a></div>
+                </div>
+            `
         }
+    ];
 
-        if (day.rain > 5 || day.humidity < 50 || day.humidity > 85) {
-          return {
-            color: "yellow",
-            icon: "🟡",
-            label: "Precaución",
-            note: "Monitorear suelo y pronóstico antes de sembrar.",
-          };
-        }
+    let currentIdx = 0;
+    const slideWrapper = document.getElementById("slideWrapper");
+    const currentSpan = document.getElementById("currentSlideSpan");
+    const totalSlidesSpan = document.getElementById("totalSlidesSpan");
+    const prevBtn = document.getElementById("prevSlideBtn");
+    const nextBtn = document.getElementById("nextSlideBtn");
 
-        if (day.temp >= 20 && day.temp <= 30 && day.rain >= 0 && day.rain <= 5 && day.humidity >= 50 && day.humidity <= 80) {
-          return {
-            color: "green",
-            icon: "🟢",
-            label: "Recomendada",
-            note: "Ventana óptima para labores de siembra.",
-          };
-        }
+    totalSlidesSpan.innerText = slides.length;
 
-        return {
-          color: "yellow",
-          icon: "🟡",
-          label: "Precaución",
-          note: "Condiciones intermedias, revisar humedad del suelo.",
-        };
-      }
-
-      function riskAlerts(day) {
-        const alerts = [];
-        if (day.rain === 0) alerts.push({ type: "warn", text: "Alerta de sequía puntual (0 mm)" });
-        if (day.rain > 15) alerts.push({ type: "danger", text: "Alerta por exceso de lluvia" });
-        if (day.humidity > 85) alerts.push({ type: "warn", text: "Humedad alta: posible riesgo de hongos" });
-        return alerts.length ? alerts : [{ type: "warn", text: "Sin alertas críticas hoy" }];
-      }
-
-      function formatDateHeading(iso) {
-        const [year, month, day] = iso.split("-");
-        const monthNames = [
-          "enero",
-          "febrero",
-          "marzo",
-          "abril",
-          "mayo",
-          "junio",
-          "julio",
-          "agosto",
-          "septiembre",
-          "octubre",
-          "noviembre",
-          "diciembre",
-        ];
-        return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]} de ${year}`;
-      }
-
-      function updateTodayCard() {
-        const today = forecastData[0];
-        document.getElementById("todayTitle").textContent = `Hoy (${formatDateHeading(today.date)}) 🌤️`;
-        const state = evaluateTrafficLight(today);
-        const badge = document.getElementById("todayBadge");
-        badge.className = `badge ${state.color}`;
-        badge.textContent = `${state.icon} ${state.label}`;
-
-        const metrics = document.getElementById("todayMetrics");
-        metrics.innerHTML = `
-          <div class="metric"><div class="label">🌡️ Temp media</div><div class="value">${today.temp.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬆️ Temp máxima</div><div class="value">${today.max.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">⬇️ Temp mínima</div><div class="value">${today.min.toFixed(1)}°C</div></div>
-          <div class="metric"><div class="label">🌧️ Lluvia</div><div class="value">${today.rain.toFixed(0)} mm</div></div>
-          <div class="metric"><div class="label">💧 Humedad</div><div class="value">${today.humidity.toFixed(0)}%</div></div>
+    function renderSlide() {
+        const slide = slides[currentIdx];
+        const iconMap = ['fa-network-wired', 'fa-laptop-code', 'fa-robot', 'fa-person-chalkboard', 'fa-users', 'fa-book-open'];
+        const htmlContent = `
+            <div class="slide-card">
+                <div class="slide-title">
+                    <i class="fas ${iconMap[currentIdx]}"></i>
+                    ${slide.title}
+                </div>
+                <div class="slide-content">
+                    ${slide.content}
+                </div>
+            </div>
         `;
-
-        const recommendationText =
-          state.color === "green"
-            ? "Ventana óptima para sembrar maíz."
-            : state.color === "yellow"
-              ? "Siembra con precaución y seguimiento diario."
-              : "No se recomienda sembrar hoy.";
-
-        document.getElementById("todayRecommendation").textContent = `Recomendación: ${recommendationText}`;
-
-        const alerts = riskAlerts(today);
-        document.getElementById("todayAlerts").innerHTML = alerts
-          .map((alert) => `<span class="alert-pill ${alert.type}">⚠️ ${alert.text}</span>`)
-          .join("");
-      }
-
-      function renderTable() {
-        const tbody = document.getElementById("forecastBody");
-        const data = forecastData.slice(0, visibleDays);
-
-        const lastDayIso = forecastData[forecastData.length - 1]?.date;
-
-        tbody.innerHTML = data
-          .map((day) => {
-            const state = evaluateTrafficLight(day);
-            const highlighted = lastDayIso && day.date === lastDayIso ? "highlight-day" : "";
-            return `
-              <tr class="${highlighted}">
-                <td>📅 ${formatDateHeading(day.date)}</td>
-                <td>${day.temp.toFixed(1)}°C</td>
-                <td>${day.rain.toFixed(0)} mm</td>
-                <td>${day.humidity.toFixed(0)}%</td>
-                <td class="signal" title="${state.label}">${state.icon}</td>
-                <td>${state.note}</td>
-              </tr>
-            `;
-          })
-          .join("");
-      }
-
-      function renderFocusDay() {
-        const focusDay = forecastData[14];
-        if (!focusDay) return;
-        const state = evaluateTrafficLight(focusDay);
-        const decision =
-          state.color === "green"
-            ? "Siembra recomendada."
-            : state.color === "yellow"
-              ? "Siembra con precaución."
-              : "No sembrar este día.";
-        const simpleTip =
-          focusDay.rain > 25
-            ? "Lluvia muy alta; espere mejor ventana para evitar pérdida de semilla."
-            : focusDay.rain > 15
-              ? "Lluvia fuerte; conviene posponer la siembra unos días."
-              : "Condiciones más favorables; revise el suelo antes de sembrar.";
-        document.getElementById("focusSectionTitle").textContent = `Lectura rápida del día 15 (${formatDateHeading(focusDay.date)})`;
-        document.getElementById("focusDayGrid").innerHTML = `
-          <article class="summary-item">
-            <h4>Fecha</h4>
-            <p>${formatDateHeading(focusDay.date)}</p>
-          </article>
-          <article class="summary-item">
-            <h4>Decisión</h4>
-            <p>${state.icon} ${decision}</p>
-          </article>
-          <article class="summary-item">
-            <h4>Condición climática</h4>
-            <p>Temp. media ${focusDay.temp.toFixed(1)}°C, lluvia ${focusDay.rain} mm, humedad ${focusDay.humidity}%.</p>
-          </article>
-          <article class="summary-item">
-            <h4>Recomendación simple</h4>
-            <p>${simpleTip}</p>
-          </article>
-        `;
-      }
-
-      function renderChart() {
-        const labels = forecastData
-          .slice(0, visibleDays)
-          .map((day) => day.date.split("-").reverse().join("/"));
-        const temps = forecastData.slice(0, visibleDays).map((day) => day.temp);
-        const rains = forecastData.slice(0, visibleDays).map((day) => day.rain);
-
-        if (forecastChart) {
-          forecastChart.destroy();
-        }
-
-        forecastChart = new Chart(document.getElementById("forecastChart"), {
-          data: {
-            labels,
-            datasets: [
-              {
-                type: "line",
-                label: "Temperatura (°C)",
-                data: temps,
-                borderColor: "#2c8f4f",
-                backgroundColor: "rgba(44, 143, 79, 0.2)",
-                borderWidth: 3,
-                pointRadius: 3,
-                tension: 0.25,
-                yAxisID: "yTemp",
-              },
-              {
-                type: "bar",
-                label: "Lluvia (mm)",
-                data: rains,
-                backgroundColor: "rgba(32, 111, 173, 0.65)",
-                borderRadius: 4,
-                yAxisID: "yRain",
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: "top" },
-            },
-            scales: {
-              yTemp: {
-                type: "linear",
-                position: "left",
-                min: 15,
-                max: 35,
-                title: { display: true, text: "Temperatura °C" },
-              },
-              yRain: {
-                type: "linear",
-                position: "right",
-                min: 0,
-                max: 40,
-                grid: { drawOnChartArea: false },
-                title: { display: true, text: "Lluvia mm" },
-              },
-            },
-          },
-        });
-      }
-
-      function renderSummary() {
-        function formatDateShort(dateIso) {
-          const [year, month, day] = dateIso.split("-");
-          const monthNames = [
-            "enero",
-            "febrero",
-            "marzo",
-            "abril",
-            "mayo",
-            "junio",
-            "julio",
-            "agosto",
-            "septiembre",
-            "octubre",
-            "noviembre",
-            "diciembre",
-          ];
-          return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]}`;
-        }
-
-        function rainLevel(mm) {
-          if (mm >= 35) return "Lluvia muy fuerte";
-          if (mm >= 25) return "Lluvia fuerte";
-          if (mm >= 15) return "Lluvia moderada";
-          return "Lluvia leve";
-        }
-
-        const avgTemp = forecastData.reduce((acc, day) => acc + day.temp, 0) / forecastData.length;
-        const totalRain = forecastData.reduce((acc, day) => acc + day.rain, 0);
-        const rainyDays = [...forecastData].sort((a, b) => b.rain - a.rain).slice(0, 3);
-        const greenWindows = forecastData
-          .filter((day) => evaluateTrafficLight(day).color === "green")
-          .map((day) => formatDateShort(day.date));
-        const summaryHtml = `
-          <article class="summary-item">
-            <h4>Temperatura promedio (15 días)</h4>
-            <p>${avgTemp.toFixed(1)}°C</p>
-          </article>
-          <article class="summary-item">
-            <h4>Lluvia acumulada</h4>
-            <p>${totalRain.toFixed(0)} mm</p>
-          </article>
-          <article class="summary-item">
-            <h4>Días más lluviosos</h4>
-            <ul>
-              ${rainyDays
-                .map((day) => `<li>${formatDateShort(day.date)}: ${day.rain} mm (${rainLevel(day.rain)})</li>`)
-                .join("")}
-            </ul>
-          </article>
-          <article class="summary-item">
-            <h4>Ventanas óptimas de siembra (verde)</h4>
-            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este período"}</p>
-            <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequía: variación -41% vs año anterior.</p>
-          </article>
-        `;
-        document.getElementById("summaryGrid").innerHTML = summaryHtml;
-      }
-
-      function escHtml(s) {
-        return String(s ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
-
-     
-      async function loadMarnPortalSummary() {
-  const panel = document.getElementById("marnPanel");
-  if (!panel) return;
-  
-  const { protocol, origin } = window.location;
-  
-  // Si es file://, mostrar datos simulados pero útiles
-  if (protocol === "file:") {
-    mostrarDatosMARNMock(panel);
-    return;
-  }
-  
-  const lat = selectedLocation.lat;
-  const lon = selectedLocation.lon;
-  const alt = 650;
-  const qs = new URLSearchParams({ latitud: String(lat), longitud: String(lon), altitud: String(alt) });
-  const url = `${origin}/api/v1/nacional/marn/resumen?${qs.toString()}`;
-  
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(resp.statusText);
+        slideWrapper.innerHTML = htmlContent;
+        currentSpan.innerText = currentIdx + 1;
+        slideWrapper.style.animation = 'none';
+        slideWrapper.offsetHeight;
+        slideWrapper.style.animation = 'fadeSlide 0.35s ease-out';
     }
-    const data = await resp.json();
-    mostrarDatosMARNReal(panel, data);
-  } catch (err) {
-    // Si falla la API, mostrar datos simulados
-    mostrarDatosMARNMock(panel, err.message);
-  }
-}
 
-function mostrarDatosMARNReal(panel, data) {
-  // Si el backend devuelve datos estructurados, los mostramos
-  const alertas = data.alertas || [];
-  const boletin = data.boletin || {};
-  
-  let html = `
-    <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">🌊 ALERTAS ACTIVAS DEL MARN</h4>
-      ${alertas.length > 0 ? alertas.map(a => `
-        <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
-          <span style="font-weight: 700;">• ${a.fecha || 'Fecha no disponible'}</span><br/>
-          <span style="color: #2c3e50;">${a.mensaje || 'Sin descripción'}</span>
-          ${a.probabilidad ? `<span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">${a.probabilidad}</span>` : ''}
-        </div>
-      `).join('') : '<p style="color: #666;">No hay alertas activas en este momento</p>'}
-    </div>
+    function nextSlide() { if (currentIdx < slides.length - 1) { currentIdx++; renderSlide(); } }
+    function prevSlide() { if (currentIdx > 0) { currentIdx--; renderSlide(); } }
 
-    <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">📊 BOLETÍN CLIMATOLÓGICO (último)</h4>
-      <div style="margin-bottom: 0.4rem;">• <strong>Fase:</strong> ${boletin.fase || 'Transición a invierno'}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Pronóstico:</strong> ${boletin.pronostico || 'Inicio de canícula en 15 días'}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Temperatura esperada:</strong> ${boletin.temperatura || '24-32°C'}</div>
-      ${boletin.fecha ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">📅 Actualizado: ${boletin.fecha}</div>` : ''}
-    </div>
+    prevBtn.addEventListener("click", prevSlide);
+    nextBtn.addEventListener("click", nextSlide);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") { prevSlide(); e.preventDefault(); }
+        else if (e.key === "ArrowRight") { nextSlide(); e.preventDefault(); }
+    });
 
-    <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
-      <a href="https://www.ambiente.gob.sv/" target="_blank" rel="noopener" style="color: #1a5f7a; text-decoration: none; font-weight: 700;">
-        🔗 Fuente oficial: www.ambiente.gob.sv
-      </a>
-    </div>
-  `;
-  
-  panel.innerHTML = html;
-}
-
-
-      function refreshDashboard() {
-        document.getElementById("calcLocation").textContent =
-          `Calculado para: ${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lon.toFixed(4)}`;
-        updateTodayCard();
-        renderFocusDay();
-        renderSummary();
-        renderTable();
-        renderChart();
-        void loadMarnPortalSummary();
-      }
-
-      function setToggle(activeDays) {
-        visibleDays = activeDays;
-        document.getElementById("btn7").classList.toggle("active", activeDays === 7);
-        document.getElementById("btn15").classList.toggle("active", activeDays === 15);
-        renderTable();
-        renderChart();
-      }
-
-      function initMap() {
-        const lat = BASE_LAT;
-        const lon = BASE_LON;
-        // Zoom algo mayor para ver bien el área metropolitana; el usuario puede alejar o mover el mapa.
-        const map = L.map("map", { zoomControl: true }).setView([lat, lon], 11);
-        const selectedPointEl = document.getElementById("selectedPoint");
-
-        const elSalvadorBounds = L.latLngBounds(
-          [13.1, -90.2], // suroeste
-          [14.6, -87.6], // noreste
-        );
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap contributors",
-          maxZoom: 19,
-        }).addTo(map);
-
-        map.setMaxBounds(elSalvadorBounds);
-        map.on("drag", () => map.panInsideBounds(elSalvadorBounds, { animate: false }));
-
-        const marker = L.marker([lat, lon], { draggable: true }).addTo(map);
-        const areaCircle = L.circle([lat, lon], {
-          radius: 14000,
-          color: "#2f7d32",
-          fillColor: "#5fa860",
-          fillOpacity: 0.24,
-          weight: 2,
-        }).addTo(map);
-
-        function updateMarkerInfo(newLat, newLon) {
-          marker.setLatLng([newLat, newLon]);
-          areaCircle.setLatLng([newLat, newLon]);
-          marker
-            .bindTooltip(`Parcela seleccionada\nAltitud aprox: 650 msnm\nLat: ${newLat.toFixed(4)} | Lon: ${newLon.toFixed(4)}`, {
-              direction: "top",
-              sticky: true,
-            })
-            .openTooltip();
-          selectedPointEl.textContent = `Punto seleccionado: ${newLat.toFixed(4)}, ${newLon.toFixed(4)}`;
-          recalculateForecastForLocation(newLat, newLon);
-          refreshDashboard();
-        }
-
-        updateMarkerInfo(lat, lon);
-
-        map.on("click", (event) => {
-          const newLat = event.latlng.lat;
-          const newLon = event.latlng.lng;
-          if (!elSalvadorBounds.contains([newLat, newLon])) return;
-          updateMarkerInfo(newLat, newLon);
-        });
-
-        marker.on("dragend", (event) => {
-          const { lat: newLat, lng: newLon } = event.target.getLatLng();
-          if (!elSalvadorBounds.contains([newLat, newLon])) {
-            updateMarkerInfo(BASE_LAT, BASE_LON);
-            return;
-          }
-          updateMarkerInfo(newLat, newLon);
-        });
-      }
-
-      document.getElementById("btn7").addEventListener("click", () => setToggle(7));
-      document.getElementById("btn15").addEventListener("click", () => setToggle(15));
-
-      recalculateForecastForLocation(BASE_LAT, BASE_LON);
-      refreshDashboard();
-      initMap();
-    </script>
-  </body>
+    renderSlide();
+</script>
+</body>
 </html>
