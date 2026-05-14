@@ -4,7 +4,15 @@ from fastapi.testclient import TestClient
 
 from app.esquemas import ItemMarnExtraccion, ModoResumenMarn, ResumenMarnApiV1
 from app.main import app
-from app.services.marn_intermedio import extraer_items_de_portal_marn
+from app.services.marn_intermedio import _bytes_html_a_texto, extraer_items_de_portal_marn
+
+
+def test_bytes_html_a_texto_ignora_charset_ascii_mal_declarado():
+    raw = "<p>Público meteorología</p>".encode("utf-8")
+    ct = "text/html; charset=us-ascii"
+    texto = _bytes_html_a_texto(raw, ct)
+    assert "Público" in texto
+    assert "meteorología" in texto
 
 
 def test_extraer_items_detecta_enlace_clima():

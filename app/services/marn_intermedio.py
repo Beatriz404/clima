@@ -85,16 +85,49 @@ def _items_demo() -> list[ItemMarnExtraccion]:
     ]
 
 
+def _bytes_html_a_texto(contenido: bytes, content_type: str | None) -> str:
+    """
+    Decodifica el cuerpo HTML evitando charsets mal declarados (p. ej. ascii en sitios con español).
+    """
+    ct = (content_type or "").lower()
+    declarado: str | None = None
+    if "charset=" in ct:
+        declarado = ct.split("charset=")[1].split(";")[0].strip().strip('"').strip("'") or None
+    if declarado and declarado.lower() in ("ascii", "us-ascii"):
+        declarado = None
+    candidatos: list[str] = []
+    if declarado:
+        candidatos.append(declarado)
+    candidatos.extend(["utf-8", "windows-1252", "iso-8859-1"])
+    vistos: set[str] = set()
+    for enc in candidatos:
+        if enc in vistos:
+            continue
+        vistos.add(enc)
+        try:
+            return contenido.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return contenido.decode("utf-8", errors="replace")
+
+
 async def _descargar_portal(url: str) -> str:
+    # Los valores de cabecera HTTP deben ser ASCII; httpx las codifica como tal.
     headers = {
-        "User-Agent": "ClimaAgricolaSV/1.0 (API intermedia documentada; +respetuoso scraping portal público)",
+        "User-Agent": (
+            "ClimaAgricolaSV/1.0 (documented intermediate API; respectful fetch of public MARN portal HTML)"
+        ),
         "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "es-SV,es;q=0.9",
     }
-    async with httpx.AsyncClient(timeout=18.0, follow_redirects=True) as cliente:
+    async with httpx.AsyncClient(
+        timeout=18.0,
+        follow_redirects=True,
+        default_encoding="utf-8",
+    ) as cliente:
         resp = await cliente.get(url, headers=headers)
         resp.raise_for_status()
-        return resp.text
+        return _bytes_html_a_texto(resp.content, resp.headers.get("content-type"))
 
 
 async def generar_resumen_marn_api_v1(latitud: float, longitud: float, altitud: float) -> ResumenMarnApiV1:
