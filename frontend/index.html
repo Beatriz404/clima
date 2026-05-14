@@ -294,6 +294,32 @@
         font-weight: 700;
       }
 
+      .marn-card .marn-hint {
+        color: #5f4c38;
+        font-size: 0.92rem;
+        margin: 0;
+      }
+      .marn-card .marn-error {
+        color: #8b2e22;
+        font-size: 0.92rem;
+      }
+      .marn-card ul {
+        margin: 0.5rem 0 0 1.1rem;
+        padding: 0;
+      }
+      .marn-card li {
+        margin: 0.4rem 0;
+        font-size: 0.92rem;
+        line-height: 1.35;
+      }
+      .marn-meta {
+        font-size: 0.84rem;
+        color: #5e4b3a;
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid #eadfcb;
+      }
+
       @media (max-width: 900px) {
         .today-grid {
           grid-template-columns: repeat(2, minmax(120px, 1fr));
@@ -312,6 +338,9 @@
       <section class="card header">
         <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
         <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
+        <p class="marn-meta" style="border-top: none; padding-top: 0.35rem; margin-top: 0.5rem">
+          Incluye lectura del <strong>portal público del MARN</strong> (<a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a>) vía la API del mismo sistema cuando accede por el servidor
+        </p>
       </section>
 
       <section class="card today">
@@ -352,6 +381,17 @@
         <h3 class="chart-title">Tendencia 15 días: temperatura y lluvia</h3>
         <div class="chart-area">
           <canvas id="forecastChart"></canvas>
+        </div>
+      </section>
+
+      <section class="card summary-section marn-card">
+        <h3 class="summary-title">Portal MARN El Salvador</h3>
+        <p class="map-note">
+          Enlaces y textos detectados en el sitio oficial
+          <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a> (resumen técnico; las cifras de temperatura y lluvia de arriba siguen siendo el panel local/Open-Meteo cuando use la API).
+        </p>
+        <div id="marnPanel">
+          <p class="marn-hint">Cargando resumen del portal MARN…</p>
         </div>
       </section>
 
@@ -411,6 +451,7 @@
         return `${y}-${m}-${d}`;
       }
 
+      /** Suma días a una fecha YYYY-MM-DD en calendario local (cruza meses correctamente). */
       function addDaysToISODate(isoDate, dayOffset) {
         const [y, mo, da] = isoDate.split("-").map(Number);
         const dt = new Date(y, mo - 1, da + dayOffset);
@@ -436,6 +477,8 @@
         const latDelta = lat - BASE_LAT;
         const lonDelta = lon - BASE_LON;
 
+        // Ajuste simplificado por ubicación: representa cambios de microclima dentro del país.
+        // Se aumenta amplitud para que el cambio sea visible al usuario en diferentes zonas.
         const tempShift = clamp(-(latDelta * 2.4) + (lonDelta * 1.6), -4.2, 4.2);
         const rainShift = clamp(latDelta * 22 + lonDelta * -20, -18, 24);
         const humidityShift = clamp(latDelta * 16 + lonDelta * -14, -18, 22);
@@ -462,7 +505,7 @@
       }
 
       function evaluateTrafficLight(day) {
-       
+      
         const highRisk = day.rain >= 25 || day.humidity >= 90;
         if (day.rain > 15 || day.temp > 35 || day.temp < 18 || highRisk) {
           return {
@@ -735,9 +778,70 @@
           <article class="summary-item">
             <h4>Ventanas óptimas de siembra (verde)</h4>
             <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas verdes en este período"}</p>
+            <p style="margin-top:0.5rem;"><strong>Alerta principal:</strong> Riesgo de sequía: variación -41% vs año anterior.</p>
           </article>
         `;
         document.getElementById("summaryGrid").innerHTML = summaryHtml;
+      }
+
+      function escHtml(s) {
+        return String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+     
+      async function loadMarnPortalSummary() {
+        const panel = document.getElementById("marnPanel");
+        if (!panel) return;
+        const { protocol, origin } = window.location;
+        if (protocol === "file:") {
+          panel.innerHTML =
+            '<p class="marn-hint">Abra esta página desde el servidor (por ejemplo su URL en Render) para ver el resumen del portal MARN. Mientras tanto puede visitar <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a>.</p>';
+          return;
+        }
+        const lat = selectedLocation.lat;
+        const lon = selectedLocation.lon;
+        const alt = 650;
+        const qs = new URLSearchParams({ latitud: String(lat), longitud: String(lon), altitud: String(alt) });
+        const url = `${origin}/api/v1/nacional/marn/resumen?${qs.toString()}`;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) {
+            const t = await resp.text();
+            throw new Error(t.slice(0, 200) || resp.statusText);
+          }
+          const data = await resp.json();
+          const modo = escHtml(data.modo);
+          const portalUrl = data.url_portal_consultado ? escHtml(data.url_portal_consultado) : "https://www.marn.gob.sv/";
+          const items = Array.isArray(data.items) ? data.items : [];
+          const lista =
+            items.length === 0
+              ? "<li><em>Sin ítems en este momento (modo " + modo + ").</em></li>"
+              : items
+                  .map((it) => {
+                    const tit = escHtml(it.titulo);
+                    const det = it.detalle ? " — " + escHtml(it.detalle) : "";
+                    const link = it.url
+                      ? `<br/><a href="${escHtml(it.url)}" target="_blank" rel="noopener">${escHtml(it.url)}</a>`
+                      : "";
+                    return `<li><strong>${tit}</strong>${det}${link}</li>`;
+                  })
+                  .join("");
+          const nota = data.nota_metodologica ? `<p class="marn-meta">${escHtml(data.nota_metodologica)}</p>` : "";
+          panel.innerHTML = `
+            <p class="marn-hint"><strong>Modo:</strong> ${modo} · <strong>Página consultada:</strong> <a href="${portalUrl}" target="_blank" rel="noopener">${portalUrl}</a></p>
+            <ul>${lista}</ul>
+            ${nota}
+          `;
+        } catch (err) {
+          panel.innerHTML = `
+            <p class="marn-error">No se pudo cargar el resumen MARN desde el servidor: ${escHtml(err.message)}</p>
+            <p class="marn-hint">Puede consultar directamente el portal oficial: <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">marn.gob.sv</a></p>
+          `;
+        }
       }
 
       function refreshDashboard() {
@@ -748,6 +852,7 @@
         renderSummary();
         renderTable();
         renderChart();
+        void loadMarnPortalSummary();
       }
 
       function setToggle(activeDays) {
