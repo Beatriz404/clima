@@ -15,11 +15,14 @@
         --fondo: #f4f1e6;
         --superficie: #fffdf7;
         --verde: #2f7d32;
+        --verde-claro: #e6f4e4;
         --amarillo: #f0b429;
+        --amarillo-claro: #fff3d7;
         --rojo: #c0392b;
+        --rojo-claro: #fde2df;
         --texto: #243026;
-        --borde: #d6c7ad;
         --sombra: 0 8px 18px rgba(53, 45, 37, 0.12);
+        --borde: #d6c7ad;
       }
 
       * {
@@ -35,55 +38,73 @@
 
       .layout {
         max-width: 1220px;
-        margin: auto;
+        margin: 0 auto;
         padding: 1rem;
         display: grid;
         gap: 1rem;
       }
 
       .card {
-        background: white;
+        background: var(--superficie);
         border: 1px solid var(--borde);
         border-radius: 14px;
         box-shadow: var(--sombra);
       }
 
       .header {
-        padding: 1.2rem;
+        padding: 1rem 1.25rem;
       }
 
       .header h1 {
+        margin: 0 0 0.3rem;
+        color: #234b1d;
+      }
+
+      .header p {
+        margin: 0;
+        color: #5e4b3a;
+      }
+
+      .today {
+        padding: 1rem 1.25rem 1.25rem;
+      }
+
+      .today-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.7rem;
+      }
+
+      .today-title h2 {
         margin: 0;
         color: #1d5024;
       }
 
-      .header p {
-        margin-top: 0.5rem;
-        color: #5e4b3a;
-      }
-
-      .summary-section {
-        padding: 1rem 1.25rem 1.25rem;
-      }
-
-      .summary-title {
-        margin: 0 0 0.7rem;
-        color: #274f1f;
-      }
-
-      #map {
-        height: 420px;
-        border-radius: 12px;
-      }
-
-      .map-note {
-        margin-top: 0.6rem;
-        color: #5f4c38;
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
         font-size: 0.9rem;
+        font-weight: 700;
       }
 
-      .today {
-        padding: 1rem 1.25rem;
+      .badge.green {
+        background: var(--verde-claro);
+        color: var(--verde);
+      }
+
+      .badge.yellow {
+        background: var(--amarillo-claro);
+        color: #82540f;
+      }
+
+      .badge.red {
+        background: var(--rojo-claro);
+        color: var(--rojo);
       }
 
       .today-grid {
@@ -100,69 +121,174 @@
       }
 
       .metric .label {
-        font-size: 0.85rem;
         color: #6f5a46;
+        font-size: 0.85rem;
       }
 
       .metric .value {
-        font-weight: bold;
-        font-size: 1.15rem;
         margin-top: 0.25rem;
+        font-weight: 700;
+        font-size: 1.15rem;
+      }
+
+      .recommendation {
+        margin-top: 0.9rem;
+        font-weight: 700;
+        color: #1f5c2d;
+      }
+
+      .alerts {
+        margin-top: 0.55rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .alert-pill {
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.84rem;
+      }
+
+      .alert-pill.warn {
+        background: #fff1d2;
+        color: #7f5a0e;
+      }
+
+      .alert-pill.danger {
+        background: #fde4e1;
+        color: #a52d22;
       }
 
       .toolbar {
-        padding: 1rem;
+        padding: 0.9rem 1.25rem;
         display: flex;
-        gap: 0.5rem;
         align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .calc-location {
+        margin-left: auto;
+        font-size: 0.9rem;
+        color: #5f4c38;
+        font-weight: 700;
       }
 
       .toggle-btn {
         border: 1px solid #9e8a72;
         background: #f5eee0;
+        color: #4e3f31;
         border-radius: 8px;
         padding: 0.5rem 0.8rem;
+        font-weight: 700;
         cursor: pointer;
-        font-weight: bold;
       }
 
       .toggle-btn.active {
-        background: #2f7d32;
-        color: white;
+        background: #3f7b2d;
+        color: #fff;
+        border-color: #2f6322;
       }
 
       .table-wrap {
-        padding: 0 1rem 1rem;
+        padding: 0 1.25rem 1rem;
         overflow-x: auto;
       }
 
       table {
         width: 100%;
         border-collapse: collapse;
+        min-width: 760px;
       }
 
       th,
       td {
-        padding: 0.7rem;
-        border-bottom: 1px solid #eadfcb;
         text-align: left;
+        border-bottom: 1px solid #eadfcb;
+        padding: 0.55rem;
+        font-size: 0.93rem;
       }
 
       th {
         background: #f8f1e3;
+        color: #5f4d39;
       }
 
-      .chart-section {
-        padding: 1rem;
+      .signal {
+        font-size: 1.18rem;
+      }
+
+      .chart-section,
+      .summary-section,
+      .map-section {
+        padding: 1rem 1.25rem 1.25rem;
+      }
+
+      .chart-title,
+      .summary-title,
+      .map-title {
+        margin: 0 0 0.7rem;
+        color: #274f1f;
       }
 
       .chart-area {
         height: 320px;
       }
 
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 0.9rem;
+      }
+
+      .summary-item {
+        background: #fff;
+        border: 1px solid #dfd0b8;
+        border-radius: 10px;
+        padding: 0.7rem;
+      }
+
+      .summary-item h4 {
+        margin: 0 0 0.4rem;
+        color: #5c4733;
+      }
+
+      .summary-item p,
+      .summary-item ul {
+        margin: 0;
+      }
+
+      .summary-item ul {
+        padding-left: 1rem;
+      }
+
+      #map {
+        width: 100%;
+        height: 430px;
+        border-radius: 12px;
+      }
+
+      .map-note {
+        margin-top: 0.5rem;
+        color: #5f4c38;
+        font-size: 0.9rem;
+      }
+
+      .map-selection {
+        margin-top: 0.5rem;
+        font-size: 0.92rem;
+        color: #3e3428;
+        font-weight: 700;
+      }
+
       @media (max-width: 900px) {
         .today-grid {
           grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -170,22 +296,23 @@
 
   <body>
     <main class="layout">
-      <section class="card header">
-        <h1>
-          Sistema Inteligente para el pronóstico de siembra en El Salvador
-        </h1>
 
-        <p>
-          Plataforma Predictiva con Machine Learning para Agroindustrias
-        </p>
+      <section class="card header">
+        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
+        <p>Plataforma Predictiva con Machine Learning para Agroindustrias</p>
       </section>
 
       <section class="card today">
-        <h2 id="todayTitle">Hoy</h2>
+        <div class="today-title">
+          <h2 id="todayTitle">Hoy</h2>
+          <span id="todayBadge" class="badge">Cargando...</span>
+        </div>
 
         <div class="today-grid" id="todayMetrics"></div>
 
-        <p id="todayRecommendation"></p>
+        <p id="todayRecommendation" class="recommendation"></p>
+
+        <div id="todayAlerts" class="alerts"></div>
       </section>
 
       <section class="card">
@@ -199,6 +326,10 @@
           <button id="btn15" class="toggle-btn">
             15 días
           </button>
+
+          <span id="calcLocation" class="calc-location">
+            Calculado para San Salvador
+          </span>
         </div>
 
         <div class="table-wrap">
@@ -206,10 +337,11 @@
             <thead>
               <tr>
                 <th>Fecha</th>
-                <th>🌡️ Temp</th>
+                <th>🌡️ Temperatura</th>
                 <th>🌧️ Lluvia</th>
                 <th>💧 Humedad</th>
-                <th>Estado</th>
+                <th>Semáforo</th>
+                <th>Recomendación</th>
               </tr>
             </thead>
 
@@ -219,132 +351,199 @@
       </section>
 
       <section class="card chart-section">
-        <h3>Tendencia climática</h3>
+        <h3 class="chart-title">
+          Tendencia climática
+        </h3>
 
         <div class="chart-area">
           <canvas id="forecastChart"></canvas>
         </div>
       </section>
 
-      <!-- NUEVO PANEL MARN -->
       <section class="card summary-section">
         <h3 class="summary-title">
-          Portal MARN El Salvador
+          Resumen ejecutivo
         </h3>
 
-        <p class="map-note">
-          Información climática agrícola complementaria.
-        </p>
-
-        <div id="marnPanel"></div>
+        <div class="summary-grid" id="summaryGrid"></div>
       </section>
 
-      <section class="card summary-section">
-        <h3 class="summary-title">
-          Mapa de referencia agrícola
+      <section class="card map-section">
+        <h3 class="map-title">
+          Mapa de referencia
         </h3>
 
         <div id="map"></div>
 
         <p class="map-note">
-          Puede mover el marcador para recalcular el pronóstico.
+          Puede mover el marcador para calcular otra zona.
+        </p>
+
+        <p id="selectedPoint" class="map-selection">
+          Punto seleccionado: 13.6929, -89.2182
         </p>
       </section>
+
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
 
-      let visibleDays = 7;
+      const FORECAST_PATTERN = [
+        { temp: 26, rain: 0, humidity: 65 },
+        { temp: 27, rain: 2, humidity: 60 },
+        { temp: 28, rain: 5, humidity: 68 },
+        { temp: 27, rain: 10, humidity: 75 },
+        { temp: 26, rain: 20, humidity: 82 },
+        { temp: 25, rain: 8, humidity: 72 },
+        { temp: 26, rain: 0, humidity: 60 },
+        { temp: 27, rain: 6, humidity: 70 },
+        { temp: 26, rain: 12, humidity: 80 },
+        { temp: 25, rain: 18, humidity: 88 },
+        { temp: 24, rain: 25, humidity: 90 },
+        { temp: 24, rain: 30, humidity: 91 },
+        { temp: 25, rain: 22, humidity: 86 },
+        { temp: 26, rain: 14, humidity: 78 },
+        { temp: 27, rain: 4, humidity: 66 }
+      ];
 
+      let forecastData = [];
+      let visibleDays = 7;
       let forecastChart;
 
-      const forecastData = [
-        { date: "2026-05-01", temp: 27, rain: 0, humidity: 65 },
-        { date: "2026-05-02", temp: 28, rain: 2, humidity: 62 },
-        { date: "2026-05-03", temp: 27, rain: 8, humidity: 75 },
-        { date: "2026-05-04", temp: 26, rain: 18, humidity: 82 },
-        { date: "2026-05-05", temp: 25, rain: 30, humidity: 90 },
-        { date: "2026-05-06", temp: 26, rain: 12, humidity: 78 },
-        { date: "2026-05-07", temp: 27, rain: 4, humidity: 68 },
-        { date: "2026-05-08", temp: 28, rain: 0, humidity: 60 },
-        { date: "2026-05-09", temp: 29, rain: 5, humidity: 66 },
-        { date: "2026-05-10", temp: 27, rain: 14, humidity: 80 },
-        { date: "2026-05-11", temp: 26, rain: 20, humidity: 85 },
-        { date: "2026-05-12", temp: 25, rain: 24, humidity: 88 },
-        { date: "2026-05-13", temp: 24, rain: 32, humidity: 92 },
-        { date: "2026-05-14", temp: 25, rain: 28, humidity: 91 },
-        { date: "2026-05-15", temp: 26, rain: 10, humidity: 74 },
-      ];
+      function evaluate(day) {
+        if (day.rain > 20) {
+          return {
+            color: "red",
+            icon: "🔴",
+            text: "No sembrar"
+          };
+        }
+
+        if (day.rain > 5) {
+          return {
+            color: "yellow",
+            icon: "🟡",
+            text: "Precaución"
+          };
+        }
+
+        return {
+          color: "green",
+          icon: "🟢",
+          text: "Condición favorable"
+        };
+      }
+
+      function generateForecast() {
+        forecastData = FORECAST_PATTERN.map((d, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() + i);
+
+          return {
+            ...d,
+            date: date.toLocaleDateString("es-SV")
+          };
+        });
+      }
 
       function renderToday() {
         const today = forecastData[0];
+        const state = evaluate(today);
 
-        document.getElementById("todayTitle").textContent =
-          "Hoy 🌤️";
+        document.getElementById("todayTitle").innerText =
+          "Hoy " + today.date;
+
+        const badge = document.getElementById("todayBadge");
+
+        badge.className = "badge " + state.color;
+        badge.innerHTML = state.icon + " " + state.text;
 
         document.getElementById("todayMetrics").innerHTML = `
           <div class="metric">
-            <div class="label">🌡️ Temperatura</div>
+            <div class="label">Temperatura</div>
             <div class="value">${today.temp}°C</div>
           </div>
 
           <div class="metric">
-            <div class="label">🌧️ Lluvia</div>
+            <div class="label">Lluvia</div>
             <div class="value">${today.rain} mm</div>
           </div>
 
           <div class="metric">
-            <div class="label">💧 Humedad</div>
+            <div class="label">Humedad</div>
             <div class="value">${today.humidity}%</div>
           </div>
         `;
 
         document.getElementById("todayRecommendation").innerHTML =
-          "<strong>Recomendación:</strong> Condiciones favorables para labores agrícolas.";
+          "Recomendación: " + state.text;
+
+        document.getElementById("todayAlerts").innerHTML =
+          today.rain > 15
+            ? '<span class="alert-pill danger">⚠️ Lluvia fuerte</span>'
+            : '<span class="alert-pill warn">Sin alertas críticas</span>';
       }
 
       function renderTable() {
-        const data = forecastData.slice(0, visibleDays);
+        const body = document.getElementById("forecastBody");
 
-        document.getElementById("forecastBody").innerHTML =
-          data
-            .map((d) => {
-              let estado = "🟢";
+        body.innerHTML = forecastData
+          .slice(0, visibleDays)
+          .map(day => {
+            const state = evaluate(day);
 
-              if (d.rain > 20) estado = "🔴";
-              else if (d.rain > 10) estado = "🟡";
+            return `
+              <tr>
+                <td>${day.date}</td>
+                <td>${day.temp}°C</td>
+                <td>${day.rain} mm</td>
+                <td>${day.humidity}%</td>
+                <td>${state.icon}</td>
+                <td>${state.text}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
 
-              return `
-                <tr>
-                  <td>${d.date}</td>
-                  <td>${d.temp}°C</td>
-                  <td>${d.rain} mm</td>
-                  <td>${d.humidity}%</td>
-                  <td>${estado}</td>
-                </tr>
-              `;
-            })
-            .join("");
+      function renderSummary() {
+        const avg =
+          forecastData.reduce((a, b) => a + b.temp, 0) /
+          forecastData.length;
+
+        const rain =
+          forecastData.reduce((a, b) => a + b.rain, 0);
+
+        document.getElementById("summaryGrid").innerHTML = `
+          <article class="summary-item">
+            <h4>Temperatura promedio</h4>
+            <p>${avg.toFixed(1)}°C</p>
+          </article>
+
+          <article class="summary-item">
+            <h4>Lluvia acumulada</h4>
+            <p>${rain} mm</p>
+          </article>
+        `;
       }
 
       function renderChart() {
         const labels = forecastData
           .slice(0, visibleDays)
-          .map((d) => d.date);
+          .map(d => d.date);
 
         const temps = forecastData
           .slice(0, visibleDays)
-          .map((d) => d.temp);
+          .map(d => d.temp);
 
         const rains = forecastData
           .slice(0, visibleDays)
-          .map((d) => d.rain);
+          .map(d => d.rain);
 
         if (forecastChart) {
           forecastChart.destroy();
@@ -360,204 +559,82 @@
 
               datasets: [
                 {
-                  label: "Lluvia",
-                  data: rains,
-                },
-                {
-                  type: "line",
                   label: "Temperatura",
                   data: temps,
+                  borderWidth: 2,
+                  type: "line"
                 },
-              ],
+
+                {
+                  label: "Lluvia",
+                  data: rains
+                }
+              ]
             },
 
             options: {
               responsive: true,
-              maintainAspectRatio: false,
-            },
+              maintainAspectRatio: false
+            }
           }
         );
-      }
-
-      async function loadMarnPortalSummary() {
-        const panel = document.getElementById("marnPanel");
-
-        panel.innerHTML = `
-          <div style="padding:1rem;">
-            Cargando información climática...
-          </div>
-        `;
-
-        try {
-          const hoy = new Date();
-
-          const fecha = hoy.toLocaleDateString("es-SV", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-
-          const lluviaHoy = forecastData[0].rain;
-          const humedadHoy = forecastData[0].humidity;
-
-          let nivel = "verde";
-          let mensaje =
-            "Condiciones agrícolas favorables.";
-
-          if (lluviaHoy > 20 || humedadHoy > 88) {
-            nivel = "rojo";
-            mensaje =
-              "Posibles lluvias intensas y riesgo de saturación.";
-          } else if (lluviaHoy > 10) {
-            nivel = "amarillo";
-            mensaje =
-              "Precaución por incremento de lluvias.";
-          }
-
-          const color =
-            nivel === "verde"
-              ? "#2e7d32"
-              : nivel === "amarillo"
-              ? "#f9a825"
-              : "#c62828";
-
-          const fondo =
-            nivel === "verde"
-              ? "#e8f5e9"
-              : nivel === "amarillo"
-              ? "#fff8e1"
-              : "#ffebee";
-
-          panel.innerHTML = `
-            <div style="
-              background:${fondo};
-              border-left:6px solid ${color};
-              padding:1rem;
-              border-radius:12px;
-            ">
-
-              <h4 style="
-                margin-top:0;
-                color:${color};
-              ">
-                🌦️ Estado climático agrícola
-              </h4>
-
-              <div style="line-height:1.7;">
-                <div>
-                  <strong>Fecha:</strong>
-                  ${fecha}
-                </div>
-
-                <div>
-                  <strong>Lluvia:</strong>
-                  ${lluviaHoy} mm
-                </div>
-
-                <div>
-                  <strong>Humedad:</strong>
-                  ${humedadHoy}%
-                </div>
-
-                <div>
-                  <strong>Estado:</strong>
-                  ${mensaje}
-                </div>
-              </div>
-
-              <div style="
-                margin-top:1rem;
-                background:white;
-                padding:0.8rem;
-                border-radius:10px;
-              ">
-                <strong>📢 Recomendación:</strong><br>
-
-                ${
-                  nivel === "verde"
-                    ? "Existe una ventana favorable para la siembra."
-                    : nivel === "amarillo"
-                    ? "Monitorear lluvias antes de sembrar."
-                    : "Conviene esperar mejores condiciones."
-                }
-              </div>
-
-            </div>
-          `;
-        } catch (error) {
-          panel.innerHTML = `
-            <div style="
-              background:#ffebee;
-              padding:1rem;
-              border-radius:12px;
-            ">
-              Error al cargar información.
-            </div>
-          `;
-        }
       }
 
       function initMap() {
         const map = L.map("map").setView(
           [BASE_LAT, BASE_LON],
-          11
+          10
         );
 
         L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
-            attribution:
-              "&copy; OpenStreetMap contributors",
+            attribution: "&copy; OpenStreetMap"
           }
         ).addTo(map);
 
-        L.marker([BASE_LAT, BASE_LON])
-          .addTo(map)
-          .bindPopup("Parcela agrícola");
+        const marker = L.marker(
+          [BASE_LAT, BASE_LON],
+          { draggable: true }
+        ).addTo(map);
+
+        marker.on("dragend", function (e) {
+          const pos = e.target.getLatLng();
+
+          document.getElementById("selectedPoint").innerText =
+            `Punto seleccionado: ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
+        });
       }
 
-      document
-        .getElementById("btn7")
-        .addEventListener("click", () => {
-          visibleDays = 7;
+      function refresh() {
+        renderToday();
+        renderTable();
+        renderSummary();
+        renderChart();
+      }
 
-          document
-            .getElementById("btn7")
-            .classList.add("active");
+      document.getElementById("btn7").addEventListener("click", () => {
+        visibleDays = 7;
 
-          document
-            .getElementById("btn15")
-            .classList.remove("active");
+        document.getElementById("btn7").classList.add("active");
+        document.getElementById("btn15").classList.remove("active");
 
-          renderTable();
-          renderChart();
-        });
+        renderTable();
+        renderChart();
+      });
 
-      document
-        .getElementById("btn15")
-        .addEventListener("click", () => {
-          visibleDays = 15;
+      document.getElementById("btn15").addEventListener("click", () => {
+        visibleDays = 15;
 
-          document
-            .getElementById("btn15")
-            .classList.add("active");
+        document.getElementById("btn15").classList.add("active");
+        document.getElementById("btn7").classList.remove("active");
 
-          document
-            .getElementById("btn7")
-            .classList.remove("active");
+        renderTable();
+        renderChart();
+      });
 
-          renderTable();
-          renderChart();
-        });
-
-      renderToday();
-
-      renderTable();
-
-      renderChart();
-
-      loadMarnPortalSummary();
-
+      generateForecast();
+      refresh();
       initMap();
     </script>
   </body>
