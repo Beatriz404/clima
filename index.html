@@ -843,48 +843,7 @@ function mostrarDatosMARNReal(panel, data) {
     </div>
   `;
   
-  panel.innerHTML = html;
-}
-function mostrarDatosMARNMock(panel, errorMsg = null) {
-  const hoy = new Date();
-  const fechaFormateada = hoy.toLocaleDateString('es-SV', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  
-  const alertas = [
-    { fecha: fechaFormateada, mensaje: "Lluvias moderadas en zona central y occidental", probabilidad: "probabilidad 70%" },
-    { fecha: fechaFormateada, mensaje: "Recomendación: Monitorear cultivos de maíz por humedad", probabilidad: "" }
-  ];
-  
-  const boletin = {
-    fase: "Transición a invierno",
-    pronostico: "Inicio de canícula en 15 días",
-    temperatura: "24-32°C",
-    fecha: fechaFormateada
-  };
-  
-  let html = `
-    <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px; border-left: 4px solid #ff6b35;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">🌊 ALERTAS ACTIVAS DEL MARN</h4>
-      ${alertas.map(a => `
-        <div style="margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid #e0e7ff;">
-          <span style="font-weight: 700;">• ${a.fecha}</span><br/>
-          <span style="color: #2c3e50;">${a.mensaje}</span>
-          ${a.probabilidad ? `<span style="display: inline-block; margin-left: 0.5rem; background: #ffeaa7; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem;">${a.probabilidad}</span>` : ''}
-        </div>
-      `).join('')}
-    </div>
-    <div style="background: #f9f5f0; padding: 1rem; border-radius: 12px; margin-top: 1rem; border-left: 4px solid #2ecc71;">
-      <h4 style="margin: 0 0 0.75rem 0; color: #1a5f7a;">📊 BOLETÍN CLIMATOLÓGICO (último)</h4>
-      <div style="margin-bottom: 0.4rem;">• <strong>Fase:</strong> ${boletin.fase}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Pronóstico:</strong> ${boletin.pronostico}</div>
-      <div style="margin-bottom: 0.4rem;">• <strong>Temperatura esperada:</strong> ${boletin.temperatura}</div>
-      <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">📅 Actualizado: ${boletin.fecha}</div>
-    </div>
-    <div style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
-      <a href="https://www.ambiente.gob.sv/" target="_blank" rel="noopener" style="color: #1a5f7a; text-decoration: none; font-weight: 700;">
-        🔗 Fuente oficial: www.ambiente.gob.sv
-      </a>
-    </div>
-  `;
+
   
   panel.innerHTML = html;
 }
