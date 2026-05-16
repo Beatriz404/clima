@@ -1,1 +1,899 @@
+```html
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Agrícola | El Salvador - Datos Reales</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      :root {
+        --fondo: #f4f1e6;
+        --superficie: #fffdf7;
+        --verde: #2f7d32;
+        --verde-claro: #e6f4e4;
+        --amarillo: #f0b429;
+        --amarillo-claro: #fff3d7;
+        --rojo: #c0392b;
+        --rojo-claro: #fde2df;
+        --cafe: #70543e;
+        --texto: #243026;
+        --sombra: 0 8px 18px rgba(53, 45, 37, 0.12);
+        --borde: #d6c7ad;
+      }
 
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: linear-gradient(180deg, #f4f1e6 0%, #efe7d4 100%);
+        color: var(--texto);
+      }
+
+      .layout {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 1rem;
+        display: grid;
+        gap: 1rem;
+      }
+
+      .card {
+        background: var(--superficie);
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        box-shadow: var(--sombra);
+      }
+
+      .header {
+        padding: 1rem 1.25rem;
+      }
+
+      .header h1 {
+        margin: 0 0 0.3rem;
+        color: #234b1d;
+      }
+
+      .header p {
+        margin: 0;
+        color: #5e4b3a;
+      }
+
+      .today {
+        padding: 1rem 1.25rem 1.25rem;
+      }
+
+      .today-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.7rem;
+      }
+
+      .today-title h2 {
+        margin: 0;
+        color: #1d5024;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .badge.green {
+        background: var(--verde-claro);
+        color: var(--verde);
+      }
+      .badge.yellow {
+        background: var(--amarillo-claro);
+        color: #82540f;
+      }
+      .badge.red {
+        background: var(--rojo-claro);
+        color: var(--rojo);
+      }
+
+      .today-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        gap: 0.7rem;
+      }
+
+      .metric {
+        background: #fff;
+        border: 1px solid #e5d6bf;
+        border-radius: 10px;
+        padding: 0.6rem;
+      }
+
+      .metric .label {
+        color: #6f5a46;
+        font-size: 0.85rem;
+      }
+
+      .metric .value {
+        margin-top: 0.25rem;
+        font-weight: 700;
+        font-size: 1.15rem;
+      }
+
+      .recommendation {
+        margin-top: 0.9rem;
+        font-weight: 700;
+        color: #1f5c2d;
+      }
+
+      .alerts {
+        margin-top: 0.55rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .alert-pill {
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.84rem;
+        border: 1px solid transparent;
+      }
+
+      .alert-pill.warn {
+        background: #fff1d2;
+        border-color: #f4cc71;
+        color: #7f5a0e;
+      }
+
+      .alert-pill.danger {
+        background: #fde4e1;
+        border-color: #f1a29b;
+        color: #a52d22;
+      }
+
+      .toolbar {
+        padding: 0.9rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .calc-location {
+        margin-left: auto;
+        font-size: 0.9rem;
+        color: #5f4c38;
+        font-weight: 700;
+      }
+
+      .toggle-btn {
+        border: 1px solid #9e8a72;
+        background: #f5eee0;
+        color: #4e3f31;
+        border-radius: 8px;
+        padding: 0.5rem 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .toggle-btn.active {
+        background: #3f7b2d;
+        color: #fff;
+        border-color: #2f6322;
+      }
+
+      .table-wrap {
+        padding: 0 1.25rem 1rem;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        border-bottom: 1px solid #eadfcb;
+        padding: 0.55rem;
+        font-size: 0.93rem;
+      }
+
+      th {
+        background: #f8f1e3;
+        color: #5f4d39;
+      }
+
+      .signal {
+        font-size: 1.18rem;
+      }
+
+      .highlight-day {
+        background: #fff1e1;
+      }
+
+      .highlight-day td {
+        font-weight: 700;
+      }
+
+      .chart-section,
+      .summary-section,
+      .map-section,
+      .marn-section {
+        padding: 1rem 1.25rem 1.25rem;
+      }
+
+      .chart-title,
+      .summary-title,
+      .map-title,
+      .marn-title {
+        margin: 0 0 0.7rem;
+        color: #274f1f;
+      }
+
+      .chart-area {
+        height: 320px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 0.9rem;
+      }
+
+      .summary-item {
+        background: #fff;
+        border: 1px solid #dfd0b8;
+        border-radius: 10px;
+        padding: 0.7rem;
+      }
+
+      .summary-item h4 {
+        margin: 0 0 0.4rem;
+        color: #5c4733;
+      }
+
+      .summary-item p,
+      .summary-item ul {
+        margin: 0;
+      }
+
+      .summary-item ul {
+        padding-left: 1rem;
+      }
+
+      #map {
+        width: 100%;
+        height: 430px;
+        border-radius: 12px;
+        border: 1px solid #d8c6a8;
+        box-shadow: inset 0 0 0 1px #fff;
+      }
+
+      .map-note {
+        margin-top: 0.5rem;
+        color: #5f4c38;
+        font-size: 0.9rem;
+      }
+
+      .map-selection {
+        margin-top: 0.5rem;
+        font-size: 0.92rem;
+        color: #3e3428;
+        font-weight: 700;
+      }
+
+      .marn-card {
+        background: #fff;
+        border: 1px solid #dfd0b8;
+        border-radius: 10px;
+      }
+      .marn-card .marn-hint {
+        color: #5f4c38;
+        font-size: 0.92rem;
+        margin: 0;
+      }
+      .marn-card .marn-error {
+        color: #8b2e22;
+        font-size: 0.92rem;
+      }
+      .marn-card ul {
+        margin: 0.5rem 0 0 1.1rem;
+        padding: 0;
+      }
+      .marn-card li {
+        margin: 0.4rem 0;
+        font-size: 0.92rem;
+        line-height: 1.35;
+      }
+      .marn-meta {
+        font-size: 0.84rem;
+        color: #5e4b3a;
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid #eadfcb;
+      }
+      .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #5e4b3a;
+      }
+      .error-message {
+        background: #fde2df;
+        border-left: 4px solid #c0392b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+      }
+
+      @media (max-width: 900px) {
+        .today-grid {
+          grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+        .chart-area {
+          height: 290px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="layout">
+      <section class="card header">
+        <h1>Sistema Inteligente para el pronóstico de siembra en El Salvador</h1>
+        <p>Plataforma Predictiva con Machine Learning para Agroindustrias - El Salvador</p>
+        <p class="marn-meta" style="border-top: none; padding-top: 0.35rem; margin-top: 0.5rem">
+          📡 Datos meteorológicos de <strong>Open-Meteo</strong> | 
+          🔍 Información institucional del <strong>Ministerio de Medio Ambiente (MARN)</strong>
+        </p>
+      </section>
+
+      <section class="card today">
+        <div class="today-title">
+          <h2 id="todayTitle">Hoy 🌤️</h2>
+          <span id="todayBadge" class="badge">Cargando...</span>
+        </div>
+        <div id="todayLoading" class="loading" style="display: none;">Cargando datos del día...</div>
+        <div id="todayMetrics" class="today-grid"></div>
+        <p id="todayRecommendation" class="recommendation"></p>
+        <div id="todayAlerts" class="alerts"></div>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <strong>Pronóstico:</strong>
+          <button id="btn7" class="toggle-btn active" type="button">7 días</button>
+          <button id="btn15" class="toggle-btn" type="button">15 días</button>
+          <span id="calcLocation" class="calc-location">Calculado para: San Salvador (por defecto)</span>
+        </div>
+        <div class="table-wrap">
+          <div id="forecastLoading" class="loading" style="display: none;">Cargando pronóstico...</div>
+          <table id="forecastTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>🌡️ Temp media</th>
+                <th>🌧️ Lluvia (mm)</th>
+                <th>💧 Humedad</th>
+                <th>Semáforo</th>
+                <th>Nota agrícola</th>
+              </tr>
+            </thead>
+            <tbody id="forecastBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card chart-section">
+        <h3 class="chart-title">Tendencia: temperatura y lluvia</h3>
+        <div class="chart-area">
+          <canvas id="forecastChart"></canvas>
+        </div>
+      </section>
+
+      <section class="card summary-section">
+        <h3 class="summary-title">Resumen ejecutivo para agricultor</h3>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </section>
+
+      <section class="card marn-section">
+        <h3 class="marn-title">🌊 Información Oficial del MARN</h3>
+        <div id="marnPanel" class="marn-card"></div>
+      </section>
+
+      <section class="card map-section">
+        <h3 class="map-title">Mapa de referencia de parcela</h3>
+        <div id="map"></div>
+        <p class="map-note">
+          Arrastre el marcador o haga clic en el mapa para seleccionar otra parcela en El Salvador.
+        </p>
+        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const BASE_LAT = 13.6929;
+      const BASE_LON = -89.2182;
+      const BASE_ALT = 650;
+
+      let forecastData = [];
+      let visibleDays = 7;
+      let forecastChart;
+      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT };
+      let isLoading = false;
+
+      function localISODate(date = new Date()) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function formatDateHeading(iso) {
+        const [year, month, day] = iso.split("-");
+        const monthNames = [
+          "enero", "febrero", "marzo", "abril", "mayo", "junio",
+          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+        ];
+        return `${parseInt(day, 10)} de ${monthNames[parseInt(month, 10) - 1]} de ${year}`;
+      }
+
+      function evaluateTrafficLight(day) {
+        const highRisk = day.lluvia_mm >= 25 || day.humedad_relativa >= 90;
+        if (day.lluvia_mm > 15 || day.temperatura_media > 35 || day.temperatura_media < 18 || highRisk) {
+          return {
+            color: "red",
+            icon: "🔴",
+            label: "No sembrar",
+            note: "Riesgo alto por exceso de lluvia o condición extrema.",
+          };
+        }
+        if (day.lluvia_mm > 5 || day.humedad_relativa < 50 || day.humedad_relativa > 85) {
+          return {
+            color: "yellow",
+            icon: "🟡",
+            label: "Precaución",
+            note: "Monitorear suelo y pronóstico antes de sembrar.",
+          };
+        }
+        if (day.temperatura_media >= 20 && day.temperatura_media <= 30 && 
+            day.lluvia_mm >= 0 && day.lluvia_mm <= 5 && 
+            day.humedad_relativa >= 50 && day.humedad_relativa <= 80) {
+          return {
+            color: "green",
+            icon: "🟢",
+            label: "Recomendada",
+            note: "Ventana óptima para labores de siembra.",
+          };
+        }
+        return {
+          color: "yellow",
+          icon: "🟡",
+          label: "Precaución",
+          note: "Condiciones intermedias, revisar humedad del suelo.",
+        };
+      }
+
+      async function obtenerPronosticoReal(lat, lon, alt, dias = 15) {
+        try {
+          const response = await fetch('/forecast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitud: lat,
+              longitud: lon,
+              altitud: alt || BASE_ALT,
+              dias: Math.min(dias, 16)
+            })
+          });
+          
+          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const data = await response.json();
+          
+          return data.dias.map(dia => ({
+            fecha: dia.fecha,
+            temperatura_media: (dia.temperatura_max + dia.temperatura_min) / 2,
+            temperatura_max: dia.temperatura_max,
+            temperatura_min: dia.temperatura_min,
+            lluvia_mm: dia.lluvia_mm,
+            humedad_relativa: dia.humedad_relativa
+          }));
+        } catch (error) {
+          console.error('Error al obtener pronóstico:', error);
+          throw new Error(`No se pudo obtener el pronóstico: ${error.message}`);
+        }
+      }
+
+      async function obtenerMarnReal(lat, lon, alt) {
+        try {
+          const qs = new URLSearchParams({ 
+            latitud: String(lat), 
+            longitud: String(lon), 
+            altitud: String(alt || BASE_ALT) 
+          });
+          const url = `/api/v1/nacional/marn/resumen?${qs.toString()}`;
+          
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return await response.json();
+        } catch (error) {
+          console.error('Error al obtener datos MARN:', error);
+          return null;
+        }
+      }
+
+      function mostrarDatosMARN(data) {
+        const panel = document.getElementById("marnPanel");
+        if (!panel) return;
+
+        if (!data) {
+          panel.innerHTML = `
+            <div class="error-message">
+              <strong>⚠️ No se pudo conectar con el MARN</strong>
+              <p>No fue posible obtener información del Ministerio de Medio Ambiente.</p>
+              <p>Puede consultar directamente en: <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener">www.marn.gob.sv</a></p>
+            </div>
+          `;
+          return;
+        }
+
+        const fechaGeneracion = new Date(data.generado_en).toLocaleString('es-SV');
+        
+        let modoTexto = '';
+        let modoColor = '';
+        let notaAdicional = '';
+        
+        switch(data.modo) {
+          case 'portal':
+            modoTexto = '✅ Datos extraídos del portal oficial';
+            modoColor = '#2ecc71';
+            break;
+          case 'demo':
+            modoTexto = '📊 Modo demostración (datos ilustrativos)';
+            modoColor = '#f39c12';
+            notaAdicional = '<p><strong>Nota:</strong> Los datos mostrados son ilustrativos. Para información oficial, consulte el portal del MARN.</p>';
+            break;
+          case 'off':
+            modoTexto = '⛔ Integración MARN desactivada';
+            modoColor = '#95a5a6';
+            break;
+          default:
+            modoTexto = '⚠️ Información no disponible temporalmente';
+            modoColor = '#e74c3c';
+        }
+
+        let itemsHtml = '';
+        if (data.items && data.items.length > 0) {
+          itemsHtml = '<h4 style="margin: 1rem 0 0.5rem 0;">📋 Información destacada:</h4><ul>';
+          itemsHtml += data.items.map(item => {
+            let content = `<li><strong>${item.titulo}</strong>`;
+            if (item.detalle) content += `<br/><span style="font-size: 0.9rem;">${item.detalle}</span>`;
+            if (item.url) content += `<br/><a href="${item.url}" target="_blank" rel="noopener" style="font-size: 0.85rem;">🔗 Ver en portal MARN</a>`;
+            content += `</li>`;
+            return content;
+          }).join('');
+          itemsHtml += '</ul>';
+        }
+
+        panel.innerHTML = `
+          <div style="background: #f0f7ff; padding: 1rem; border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+              <h4 style="margin: 0; color: #1a5f7a;">Ministerio de Medio Ambiente (MARN)</h4>
+              <span style="font-size: 0.8rem; color: #666;">${fechaGeneracion}</span>
+            </div>
+            <p style="margin: 0.25rem 0 0.5rem 0; color: ${modoColor}; font-weight: 500;">${modoTexto}</p>
+            <p style="font-size: 0.85rem; color: #555; margin: 0.5rem 0;">${data.fuente_oficial}</p>
+            ${itemsHtml}
+            ${data.nota_metodologica ? `<p style="font-size: 0.8rem; color: #666; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ddd;">📌 ${data.nota_metodologica}</p>` : ''}
+            ${notaAdicional}
+            <div style="margin-top: 0.75rem; padding-top: 0.5rem; text-align: center;">
+              <a href="https://www.marn.gob.sv/" target="_blank" rel="noopener" style="color: #1a5f7a; text-decoration: none; font-weight: 700;">
+                🌐 Visitar portal oficial del MARN → www.marn.gob.sv
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      async function refreshDashboard() {
+        if (isLoading) return;
+        isLoading = true;
+
+        document.getElementById("todayMetrics").style.display = "none";
+        document.getElementById("todayLoading").style.display = "block";
+        document.getElementById("forecastTable").style.display = "none";
+        document.getElementById("forecastLoading").style.display = "block";
+
+        try {
+          forecastData = await obtenerPronosticoReal(
+            selectedLocation.lat, 
+            selectedLocation.lon, 
+            selectedLocation.alt,
+            15
+          );
+          
+          document.getElementById("calcLocation").textContent = 
+            `Calculado para: ${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lon.toFixed(4)}`;
+          
+          updateTodayCard();
+          renderSummary();
+          renderTable();
+          renderChart();
+          
+          const marnData = await obtenerMarnReal(selectedLocation.lat, selectedLocation.lon, selectedLocation.alt);
+          mostrarDatosMARN(marnData);
+          
+        } catch (error) {
+          console.error('Error al actualizar dashboard:', error);
+          mostrarErrorGeneral(error.message);
+        } finally {
+          document.getElementById("todayMetrics").style.display = "grid";
+          document.getElementById("todayLoading").style.display = "none";
+          document.getElementById("forecastTable").style.display = "table";
+          document.getElementById("forecastLoading").style.display = "none";
+          isLoading = false;
+        }
+      }
+
+      function updateTodayCard() {
+        if (!forecastData || forecastData.length === 0) return;
+        
+        const today = forecastData[0];
+        document.getElementById("todayTitle").textContent = `Hoy (${formatDateHeading(today.fecha)}) 🌤️`;
+        
+        const state = evaluateTrafficLight(today);
+        const badge = document.getElementById("todayBadge");
+        badge.className = `badge ${state.color}`;
+        badge.textContent = `${state.icon} ${state.label}`;
+
+        const metrics = document.getElementById("todayMetrics");
+        metrics.innerHTML = `
+          <div class="metric"><div class="label">🌡️ Temp media</div><div class="value">${today.temperatura_media.toFixed(1)}°C</div></div>
+          <div class="metric"><div class="label">⬆️ Temp máxima</div><div class="value">${today.temperatura_max.toFixed(1)}°C</div></div>
+          <div class="metric"><div class="label">⬇️ Temp mínima</div><div class="value">${today.temperatura_min.toFixed(1)}°C</div></div>
+          <div class="metric"><div class="label">🌧️ Lluvia</div><div class="value">${today.lluvia_mm.toFixed(1)} mm</div></div>
+          <div class="metric"><div class="label">💧 Humedad</div><div class="value">${today.humedad_relativa.toFixed(0)}%</div></div>
+        `;
+
+        const recommendationText = state.color === "green"
+          ? "✅ Ventana óptima para sembrar."
+          : state.color === "yellow"
+            ? "⚠️ Siembra con precaución y seguimiento diario."
+            : "❌ No se recomienda sembrar hoy.";
+
+        document.getElementById("todayRecommendation").textContent = `Recomendación: ${recommendationText}`;
+        
+        const alerts = [];
+        if (today.lluvia_mm === 0) alerts.push({ type: "warn", text: "Sequía puntual (0 mm)" });
+        if (today.lluvia_mm > 15) alerts.push({ type: "danger", text: "Exceso de lluvia" });
+        if (today.humedad_relativa > 85) alerts.push({ type: "warn", text: "Humedad alta: riesgo de hongos" });
+        if (alerts.length === 0) alerts.push({ type: "warn", text: "Sin alertas críticas hoy" });
+        
+        document.getElementById("todayAlerts").innerHTML = alerts
+          .map((alert) => `<span class="alert-pill ${alert.type}">⚠️ ${alert.text}</span>`)
+          .join("");
+      }
+
+      function renderTable() {
+        const tbody = document.getElementById("forecastBody");
+        const data = forecastData.slice(0, visibleDays);
+
+        tbody.innerHTML = data
+          .map((day) => {
+            const state = evaluateTrafficLight(day);
+            return `
+              <tr>
+                <td>📅 ${formatDateHeading(day.fecha)}</td>
+                <td>${day.temperatura_media.toFixed(1)}°C</td>
+                <td>${day.lluvia_mm.toFixed(1)} mm</td>
+                <td>${day.humedad_relativa.toFixed(0)}%</td>
+                <td class="signal" title="${state.label}">${state.icon}</td>
+                <td>${state.note}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function renderChart() {
+        const labels = forecastData.slice(0, visibleDays).map((day) => {
+          const [year, month, dayNum] = day.fecha.split("-");
+          return `${dayNum}/${month}`;
+        });
+        const temps = forecastData.slice(0, visibleDays).map((day) => day.temperatura_media);
+        const rains = forecastData.slice(0, visibleDays).map((day) => day.lluvia_mm);
+
+        if (forecastChart) {
+          forecastChart.destroy();
+        }
+
+        const ctx = document.getElementById("forecastChart").getContext("2d");
+        forecastChart = new Chart(ctx, {
+          data: {
+            labels,
+            datasets: [
+              {
+                type: "line",
+                label: "Temperatura (°C)",
+                data: temps,
+                borderColor: "#2c8f4f",
+                backgroundColor: "rgba(44, 143, 79, 0.1)",
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: "#2c8f4f",
+                tension: 0.3,
+                yAxisID: "yTemp",
+              },
+              {
+                type: "bar",
+                label: "Lluvia (mm)",
+                data: rains,
+                backgroundColor: "rgba(32, 111, 173, 0.7)",
+                borderRadius: 4,
+                yAxisID: "yRain",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "top" },
+              tooltip: { mode: "index", intersect: false }
+            },
+            scales: {
+              yTemp: {
+                type: "linear",
+                position: "left",
+                min: 15,
+                max: 38,
+                title: { display: true, text: "Temperatura °C", font: { weight: "bold" } },
+                grid: { drawOnChartArea: true }
+              },
+              yRain: {
+                type: "linear",
+                position: "right",
+                min: 0,
+                max: 50,
+                title: { display: true, text: "Lluvia mm", font: { weight: "bold" } },
+                grid: { drawOnChartArea: false }
+              },
+            },
+          },
+        });
+      }
+
+      function renderSummary() {
+        if (!forecastData || forecastData.length === 0) return;
+        
+        const avgTemp = forecastData.reduce((acc, day) => acc + day.temperatura_media, 0) / forecastData.length;
+        const totalRain = forecastData.reduce((acc, day) => acc + day.lluvia_mm, 0);
+        const rainyDays = [...forecastData].sort((a, b) => b.lluvia_mm - a.lluvia_mm).slice(0, 3);
+        const greenWindows = forecastData
+          .filter((day) => evaluateTrafficLight(day).color === "green")
+          .map((day) => formatDateHeading(day.fecha));
+        
+        const summaryHtml = `
+          <article class="summary-item">
+            <h4>🌡️ Temperatura promedio (15 días)</h4>
+            <p>${avgTemp.toFixed(1)}°C</p>
+            <p style="font-size: 0.85rem; color: #666;">Rango: ${Math.min(...forecastData.map(d => d.temperatura_media)).toFixed(1)}°C - ${Math.max(...forecastData.map(d => d.temperatura_media)).toFixed(1)}°C</p>
+          </article>
+          <article class="summary-item">
+            <h4>💧 Lluvia acumulada</h4>
+            <p>${totalRain.toFixed(1)} mm</p>
+            <p style="font-size: 0.85rem; color: #666;">Promedio diario: ${(totalRain / forecastData.length).toFixed(1)} mm</p>
+          </article>
+          <article class="summary-item">
+            <h4>🌧️ Días más lluviosos</h4>
+            <ul>
+              ${rainyDays.map((day) => `<li>${formatDateHeading(day.fecha)}: ${day.lluvia_mm.toFixed(1)} mm</li>`).join("")}
+            </ul>
+          </article>
+          <article class="summary-item">
+            <h4>🌱 Ventanas óptimas de siembra</h4>
+            <p>${greenWindows.length ? greenWindows.join(", ") : "Sin ventanas óptimas en este período"}</p>
+            <p style="margin-top:0.5rem; font-size:0.85rem;"><strong>⚠️ Recomendación:</strong> Monitorear condiciones diarias antes de sembrar.</p>
+          </article>
+        `;
+        document.getElementById("summaryGrid").innerHTML = summaryHtml;
+      }
+
+      function mostrarErrorGeneral(mensaje) {
+        const panel = document.getElementById("marnPanel");
+        if (panel) {
+          panel.innerHTML = `
+            <div class="error-message">
+              <strong>⚠️ Error al cargar datos</strong>
+              <p>${mensaje}</p>
+              <p>Intente nuevamente más tarde o seleccione otra ubicación en el mapa.</p>
+            </div>
+          `;
+        }
+      }
+
+      function setToggle(activeDays) {
+        visibleDays = activeDays;
+        document.getElementById("btn7").classList.toggle("active", activeDays === 7);
+        document.getElementById("btn15").classList.toggle("active", activeDays === 15);
+        renderTable();
+        renderChart();
+      }
+
+      function initMap() {
+        const map = L.map("map", { zoomControl: true }).setView([BASE_LAT, BASE_LON], 11);
+        const selectedPointEl = document.getElementById("selectedPoint");
+
+        const elSalvadorBounds = L.latLngBounds([13.1, -90.2], [14.6, -87.6]);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map);
+
+        map.setMaxBounds(elSalvadorBounds);
+        map.on("drag", () => map.panInsideBounds(elSalvadorBounds, { animate: false }));
+
+        const marker = L.marker([BASE_LAT, BASE_LON], { draggable: true }).addTo(map);
+        const areaCircle = L.circle([BASE_LAT, BASE_LON], {
+          radius: 14000,
+          color: "#2f7d32",
+          fillColor: "#5fa860",
+          fillOpacity: 0.24,
+          weight: 2,
+        }).addTo(map);
+
+        async function updateMarkerInfo(newLat, newLon) {
+          marker.setLatLng([newLat, newLon]);
+          areaCircle.setLatLng([newLat, newLon]);
+          selectedPointEl.textContent = `Punto seleccionado: ${newLat.toFixed(4)}, ${newLon.toFixed(4)}`;
+          selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT };
+          await refreshDashboard();
+        }
+
+        map.on("click", async (event) => {
+          const newLat = event.latlng.lat;
+          const newLon = event.latlng.lng;
+          if (!elSalvadorBounds.contains([newLat, newLon])) return;
+          await updateMarkerInfo(newLat, newLon);
+        });
+
+        marker.on("dragend", async (event) => {
+          const { lat: newLat, lng: newLon } = event.target.getLatLng();
+          if (!elSalvadorBounds.contains([newLat, newLon])) {
+            await updateMarkerInfo(BASE_LAT, BASE_LON);
+            return;
+          }
+          await updateMarkerInfo(newLat, newLon);
+        });
+
+        await updateMarkerInfo(BASE_LAT, BASE_LON);
+      }
+
+      document.getElementById("btn7").addEventListener("click", () => setToggle(7));
+      document.getElementById("btn15").addEventListener("click", () => setToggle(15));
+
+      refreshDashboard();
+      initMap();
+    </script>
+  </body>
+</html>
+```
