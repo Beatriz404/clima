@@ -8,5 +8,6 @@ python-dateutil
 numpy
 pandas
 scikit-learn
+beautifulsoup4
 pytest
-fpdf2
+pytest-asyncio

@@ -1,0 +1,11 @@
+body {
+  font-feature-settings: "kern" 1;
+}
+
+.card {
+  backdrop-filter: blur(6px);
+}
+
+.navbar-brand {
+  letter-spacing: 0.02em;
+}

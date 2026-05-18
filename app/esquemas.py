@@ -1,6 +1,5 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -88,63 +87,45 @@ class RespuestaInsights(BaseModel):
     notificaciones: list[str]
 
 
-class RespuestaMarnComplemento(BaseModel):
-    """Respuesta adicional; no forma parte de /forecast ni de los demás endpoints existentes."""
-
-    ubicacion: dict
-    fuente: str = "MARN (red nacional)"
-    disponible: bool
-    mensaje: str | None = None
-    datos: dict[str, Any] | None = None
-
-
-class EstadoIntegracionMarn(BaseModel):
-    marn_complemento_configurado: bool
-    api_intermedio_publica: str = "/api/v1/nacional/marn/resumen"
-    nota: str = (
-        "Opcional: defina MARN_COMPLEMENTO_URL con la URL absoluta de api_intermedio_publica "
-        "(mismo host) para que POST /marn/complemento reenvíe este JSON sin duplicar lógica."
-    )
-
-
 class ModoResumenMarn(str, Enum):
-    """Origen del resumen entregado por la API pública intermedia."""
-
     portal = "portal"
-    demo = "demo"
+    snet = "snet"
     no_disponible = "no_disponible"
     off = "off"
 
 
 class ItemMarnExtraccion(BaseModel):
-    """Elemento informativo extraído del portal o generado en modo demo."""
-
-    tipo: str = Field(..., description="enlace | texto | aviso")
+    tipo: str
     titulo: str
     detalle: str | None = None
     url: str | None = None
 
 
-class ResumenMarnApiV1(BaseModel):
-    """
-    Contrato estable v1 para el backend intermedio nacional (referencia MARN vía portal público).
-    No sustituye pronósticos numéricos de Open-Meteo.
-    """
+class EstacionSrtDiaria(BaseModel):
+    indice: str
+    nombre: str
+    fecha_reporte: str | None = None
+    lluvia_mm: float | None = None
+    temp_max_dia_anterior_c: float | None = None
+    temp_min_dia_actual_c: float | None = None
+    humedad_relativa_pct: float | None = None
+    distancia_km: float | None = None
+    latitud_estacion: float | None = None
+    longitud_estacion: float | None = None
 
-    schema_version: str = Field("1.0", description="Versión del esquema de esta respuesta.")
+
+class ResumenMarnApiV1(BaseModel):
+    schema_version: str = "1.0"
     generado_en: datetime
-    consulta: dict[str, float]
-    fuente_oficial: str = Field(
-        default=(
-            "Ministerio de Medio Ambiente y Recursos Naturales (MARN), El Salvador — "
-            "lectura derivada del portal público"
-        ),
-        description="Institución de referencia; el contenido puede ser resumen no oficial.",
-    )
+    consulta: dict
     modo: ModoResumenMarn
+    fuente_oficial: str | None = None
     url_portal_consultado: str | None = None
-    items: list[ItemMarnExtraccion] = Field(default_factory=list)
-    nota_metodologica: str = Field(
-        ...,
-        description="Cómo se obtuvo la información y limitaciones.",
-    )
+    items: list[ItemMarnExtraccion]
+    nota_metodologica: str | None = None
+    estacion_srt_cercana: EstacionSrtDiaria | None = None
+    url_datos_srt: str | None = None
+
+
+class EstadoIntegracionMarn(BaseModel):
+    marn_complemento_configurado: bool

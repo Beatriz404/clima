@@ -27,7 +27,7 @@ Aplicacion climatica para agricultura usando datos gratuitos de Open-Meteo, ajus
 ## Requisitos
 
 - Python 3.10+
-- `pip install -r requirements.txt`
+- pip install -r requirements.txt
 
 ## Ejecutar backend + frontend
 

@@ -1,0 +1,23 @@
+{
+  "A15": { "nombre": "GUIJA", "lat": 14.273, "lon": -89.89 },
+  "A18": { "nombre": "FINCA LOS ANDES", "lat": 13.859, "lon": -89.798 },
+  "A31": { "nombre": "PLANES DE MONTECRISTO", "lat": 13.95, "lon": -88.18 },
+  "B10": { "nombre": "CERRON GRANDE", "lat": 14.383, "lon": -89.043 },
+  "G3": { "nombre": "NUEVA CONCEPCION", "lat": 13.826, "lon": -89.294 },
+  "L27": { "nombre": "CHILTIUPAN", "lat": 13.528, "lon": -89.447 },
+  "L4": { "nombre": "SAN ANDRES", "lat": 13.733, "lon": -89.073 },
+  "S10": { "nombre": "A. ILOPANGO", "lat": 13.701, "lon": -89.11 },
+  "A27": { "nombre": "C. DE LA FRONTERA", "lat": 14.018, "lon": -89.45 },
+  "G4": { "nombre": "LA PALMA", "lat": 13.849, "lon": -88.179 },
+  "V9": { "nombre": "PUENTE CUSCATLAN", "lat": 13.698, "lon": -89.241 },
+  "C9": { "nombre": "COJUTEPEQUE", "lat": 13.717, "lon": -88.936 },
+  "B8": { "nombre": "VILLA VICTORIA", "lat": 13.95, "lon": -88.65 },
+  "G13": { "nombre": "LAS PILAS", "lat": 13.924, "lon": -89.847 },
+  "U6": { "nombre": "SANTIAGO DE MARIA", "lat": 13.483, "lon": -88.467 },
+  "Z3": { "nombre": "PERQUIN", "lat": 13.776, "lon": -88.142 },
+  "Z2": { "nombre": "SAN FCO. GOTERA", "lat": 13.592, "lon": -87.891 },
+  "T24": { "nombre": "LOS NARANJOS", "lat": 13.75, "lon": -89.78 },
+  "A37": { "nombre": "SANTA ANA-UNICAES", "lat": 13.977, "lon": -89.56 },
+  "B6": { "nombre": "SENSUNTEPEQUE", "lat": 13.868, "lon": -88.632 },
+  "T6": { "nombre": "ACAJUTLA PUERTO NUEVO", "lat": 13.592, "lon": -89.827 }
+}

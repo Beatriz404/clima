@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultados · Predicción Climática</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body class="bg-dark text-light min-vh-100">
+  <nav class="navbar navbar-dark bg-black border-bottom border-secondary mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="{{ url_for('inicio') }}">Clima LSTM</a>
+    </div>
+  </nav>
+  <main class="container pb-5">
+    <h1 class="h3 mb-4">Panel de resultados</h1>
+    {% if error %}
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+    <a href="{{ url_for('inicio') }}" class="btn btn-outline-light">Volver</a>
+    {% else %}
+    <div class="row g-4">
+      <div class="col-md-6 col-xl-3">
+        <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+          <div class="card-body">
+            <h6 class="text-secondary text-uppercase small">Temperatura predicha</h6>
+            <p class="display-6 fw-bold mb-0">{{ temperatura_predicha }} °C</p>
+            <small class="text-muted">MAE prueba: {{ mae_prueba }} · Loss: {{ perdida_prueba }}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-9">
+        <div class="card bg-secondary bg-opacity-25 border-secondary shadow">
+          <div class="card-header border-secondary text-secondary small">Últimos datos</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-dark table-striped mb-0">
+                <thead>
+                  <tr>
+                    <th>Temperatura °C</th>
+                    <th>Humedad %</th>
+                    <th>Precipitación</th>
+                    <th>Viento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fila in tabla_datos %}
+                  <tr>
+                    <td>{{ fila.temperatura }}</td>
+                    <td>{{ fila.humedad }}</td>
+                    <td>{{ fila.precipitacion }}</td>
+                    <td>{{ fila.velocidad_viento }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+          <div class="card-header border-secondary">Pérdida del modelo</div>
+          <div class="card-body text-center">
+            {% if imagen_perdida %}
+            <img src="{{ url_for('static', filename=imagen_perdida) }}" class="img-fluid rounded" alt="">
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+          <div class="card-header border-secondary">Predicción vs real</div>
+          <div class="card-body text-center">
+            {% if imagen_pred_vs_real %}
+            <img src="{{ url_for('static', filename=imagen_pred_vs_real) }}" class="img-fluid rounded" alt="">
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+          <div class="card-header border-secondary">Serie temporal</div>
+          <div class="card-body text-center">
+            {% if imagen_serie %}
+            <img src="{{ url_for('static', filename=imagen_serie) }}" class="img-fluid rounded" alt="">
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+          <div class="card-header border-secondary">Histograma de errores</div>
+          <div class="card-body text-center">
+            {% if imagen_errores %}
+            <img src="{{ url_for('static', filename=imagen_errores) }}" class="img-fluid rounded" alt="">
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <a href="{{ url_for('inicio') }}" class="btn btn-outline-light">Volver al inicio</a>
+    </div>
+    {% endif %}
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

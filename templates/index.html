@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Predicción Climática con IA</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body class="bg-dark text-light min-vh-100">
+  <nav class="navbar navbar-dark bg-black border-bottom border-secondary mb-4">
+    <div class="container">
+      <span class="navbar-brand fw-semibold">Clima LSTM</span>
+    </div>
+  </nav>
+  <main class="container pb-5">
+    <div class="row justify-content-center mb-4">
+      <div class="col-lg-8 text-center">
+        <h1 class="display-5 fw-bold mb-3">Predicción Climática con IA</h1>
+        <p class="text-secondary">Modelo LSTM sobre datos Open-Meteo · última hora predicha</p>
+        <button type="button" id="btn-predecir" class="btn btn-primary btn-lg px-5 mt-2">Ejecutar Predicción</button>
+      </div>
+    </div>
+    <div id="bloque-carga" class="text-center py-5 d-none">
+      <div class="spinner-border text-info mb-3" role="status"></div>
+      <p class="fs-5 text-info mb-0">Procesando modelo, por favor espere...</p>
+    </div>
+    <div id="panel-resultados" class="d-none"></div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const urlBaseStatic = "{{ url_for('static', filename='graficos/perdida.png') }}".replace(/graficos\/perdida\.png$/, '');
+    const btn = document.getElementById('btn-predecir');
+    const bloqueCarga = document.getElementById('bloque-carga');
+    const panel = document.getElementById('panel-resultados');
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      bloqueCarga.classList.remove('d-none');
+      panel.classList.add('d-none');
+      panel.innerHTML = '';
+      try {
+        const res = await fetch('{{ url_for("predecir") }}', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        let datos;
+        try {
+          datos = await res.json();
+        } catch (err) {
+          throw new Error('No se pudo leer la respuesta del servidor');
+        }
+        if (!res.ok || datos.ok === false) throw new Error(datos.error || 'Error en la predicción');
+        const filas = datos.tabla_datos.map(r => `
+          <tr><td>${r.temperatura}</td><td>${r.humedad}</td><td>${r.precipitacion}</td><td>${r.velocidad_viento}</td></tr>`).join('');
+        panel.innerHTML = `
+          <div class="row g-4">
+            <div class="col-md-6 col-xl-3">
+              <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+                <div class="card-body">
+                  <h6 class="text-secondary text-uppercase small">Temperatura predicha (próx. hora)</h6>
+                  <p class="display-6 fw-bold mb-0">${datos.temperatura_predicha} °C</p>
+                  <small class="text-muted">MAE test: ${datos.mae_prueba}</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-xl-9">
+              <div class="card bg-secondary bg-opacity-25 border-secondary shadow">
+                <div class="card-header border-secondary text-secondary small">Últimas 24 horas (muestra)</div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-dark table-striped mb-0">
+                      <thead><tr><th>Temp. °C</th><th>Humedad %</th><th>Precip.</th><th>Viento</th></tr></thead>
+                      <tbody>${filas}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+                <div class="card-header border-secondary">Pérdida del modelo</div>
+                <div class="card-body text-center">
+                  <img src="${urlBaseStatic}${datos.imagen_perdida}" class="img-fluid rounded" alt="">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+                <div class="card-header border-secondary">Predicción vs real</div>
+                <div class="card-body text-center">
+                  <img src="${urlBaseStatic}${datos.imagen_pred_vs_real}" class="img-fluid rounded" alt="">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+                <div class="card-header border-secondary">Serie temporal</div>
+                <div class="card-body text-center">
+                  <img src="{{ url_for('static', filename='') }}${datos.imagen_serie.replace(/^graficos\\//,'graficos/')}" class="img-fluid rounded" alt="">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-secondary bg-opacity-25 border-secondary h-100 shadow">
+                <div class="card-header border-secondary">Histograma de errores</div>
+                <div class="card-body text-center">
+                  <img src="${urlBaseStatic}${datos.imagen_errores}" class="img-fluid rounded" alt="">
+                </div>
+              </div>
+            </div>
+          </div>`;
+        panel.classList.remove('d-none');
+      } catch (e) {
+        panel.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+        panel.classList.remove('d-none');
+      } finally {
+        bloqueCarga.classList.add('d-none');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
