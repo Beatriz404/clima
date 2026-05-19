@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from datetime import datetime
 from time import monotonic
 
@@ -9,7 +10,11 @@ from app.configuracion import obtener_ajustes
 ajustes = obtener_ajustes()
 
 _cache: dict[str, tuple[float, list[dict]]] = {}
+_solicitudes_activas: dict[str, asyncio.Task[list[dict]]] = {}
+_semaphore_open_meteo = asyncio.Semaphore(2)
 _cliente_http: httpx.AsyncClient | None = None
+
+_FORECAST_DIAS_MAX = 15
 
 
 class LimiteOpenMeteoError(Exception):
@@ -27,10 +32,12 @@ class LimiteOpenMeteoError(Exception):
 
 def limpiar_cache() -> None:
     _cache.clear()
+    _solicitudes_activas.clear()
 
 
 def _clave_cache(tipo: str, latitud: float, longitud: float, altitud: float, **extra: object) -> str:
-    partes = [tipo, f"{latitud:.4f}", f"{longitud:.4f}", f"{altitud:.1f}"]
+    altitud_redondeada = round(altitud, -1)
+    partes = [tipo, f"{latitud:.4f}", f"{longitud:.4f}", f"{altitud_redondeada:.0f}"]
     partes.extend(f"{k}={v}" for k, v in sorted(extra.items()))
     return "|".join(partes)
 
@@ -58,17 +65,18 @@ async def _cliente() -> httpx.AsyncClient:
 
 
 async def _solicitar_json(url: str, parametros: dict) -> dict:
-    cliente = await _cliente()
-    max_reintentos = 3
-    for intento in range(max_reintentos):
-        respuesta = await cliente.get(url, params=parametros)
-        if respuesta.status_code == 429:
-            if intento < max_reintentos - 1:
-                await asyncio.sleep(2**intento + 1)
-                continue
-            raise LimiteOpenMeteoError()
-        respuesta.raise_for_status()
-        return respuesta.json()
+    async with _semaphore_open_meteo:
+        cliente = await _cliente()
+        max_reintentos = 3
+        for intento in range(max_reintentos):
+            respuesta = await cliente.get(url, params=parametros)
+            if respuesta.status_code == 429:
+                if intento < max_reintentos - 1:
+                    await asyncio.sleep(2**intento + 1)
+                    continue
+                raise LimiteOpenMeteoError()
+            respuesta.raise_for_status()
+            return respuesta.json()
     raise LimiteOpenMeteoError()
 
 
@@ -109,49 +117,73 @@ def _a_formato_siembra(respuesta: dict, dias: int) -> list[dict]:
     ]
 
 
-async def obtener_pronostico(latitud: float, longitud: float, altitud: float, dias: int) -> list[dict]:
-    clave = _clave_cache("forecast", latitud, longitud, altitud, dias=dias)
+async def _obtener_pronostico_dedup(
+    clave: str,
+    latitud: float,
+    longitud: float,
+    altitud: float,
+    dias_solicitados: int,
+    formatear: Callable[[dict, int], list[dict]],
+) -> list[dict]:
+    dias = min(max(dias_solicitados, 1), _FORECAST_DIAS_MAX)
+
     en_cache = _obtener_de_cache(clave)
     if en_cache is not None:
-        return en_cache
+        return en_cache[:dias]
 
-    url = f"{ajustes.api_open_meteo_base}/forecast"
-    parametros = {
-        "latitude": latitud,
-        "longitude": longitud,
-        "elevation": altitud,
-        "timezone": ajustes.zona_horaria,
-        "daily": _VARIABLES_DIARIAS,
-        "forecast_days": dias,
-    }
-    datos = await _solicitar_json(url, parametros)
-    resultado = _a_formato_diario(datos, dias)
-    _guardar_en_cache(clave, resultado)
-    return resultado
+    if clave in _solicitudes_activas:
+        resultado = await _solicitudes_activas[clave]
+        return resultado[:dias]
+
+    async def _cargar() -> list[dict]:
+        url = f"{ajustes.api_open_meteo_base}/forecast"
+        parametros = {
+            "latitude": latitud,
+            "longitude": longitud,
+            "elevation": altitud,
+            "timezone": ajustes.zona_horaria,
+            "daily": _VARIABLES_DIARIAS,
+            "forecast_days": _FORECAST_DIAS_MAX,
+        }
+        datos = await _solicitar_json(url, parametros)
+        resultado = formatear(datos, _FORECAST_DIAS_MAX)
+        _guardar_en_cache(clave, resultado)
+        return resultado
+
+    tarea = asyncio.create_task(_cargar())
+    _solicitudes_activas[clave] = tarea
+    try:
+        resultado = await tarea
+        return resultado[:dias]
+    finally:
+        _solicitudes_activas.pop(clave, None)
+
+
+async def obtener_pronostico(latitud: float, longitud: float, altitud: float, dias: int) -> list[dict]:
+    clave = _clave_cache("forecast", latitud, longitud, altitud)
+    return await _obtener_pronostico_dedup(
+        clave,
+        latitud,
+        longitud,
+        altitud,
+        dias,
+        _a_formato_diario,
+    )
 
 
 async def obtener_pronostico_siembra(
     latitud: float, longitud: float, altitud: float, dias: int = 15
 ) -> list[dict]:
     """Pronóstico diario completo para persistencia en pronosticos_siembra."""
-    clave = _clave_cache("forecast_siembra", latitud, longitud, altitud, dias=dias)
-    en_cache = _obtener_de_cache(clave)
-    if en_cache is not None:
-        return en_cache
-
-    url = f"{ajustes.api_open_meteo_base}/forecast"
-    parametros = {
-        "latitude": latitud,
-        "longitude": longitud,
-        "elevation": altitud,
-        "timezone": ajustes.zona_horaria,
-        "daily": _VARIABLES_DIARIAS,
-        "forecast_days": min(dias, 16),
-    }
-    datos = await _solicitar_json(url, parametros)
-    resultado = _a_formato_siembra(datos, min(dias, 16))
-    _guardar_en_cache(clave, resultado)
-    return resultado
+    clave = _clave_cache("forecast_siembra", latitud, longitud, altitud)
+    return await _obtener_pronostico_dedup(
+        clave,
+        latitud,
+        longitud,
+        altitud,
+        dias,
+        _a_formato_siembra,
+    )
 
 
 async def obtener_historico(
@@ -164,17 +196,28 @@ async def obtener_historico(
     if en_cache is not None:
         return en_cache
 
-    url = f"{ajustes.api_open_meteo_archivo_base}/archive"
-    parametros = {
-        "latitude": latitud,
-        "longitude": longitud,
-        "elevation": altitud,
-        "timezone": ajustes.zona_horaria,
-        "start_date": fecha_inicio,
-        "end_date": fecha_fin,
-        "daily": _VARIABLES_DIARIAS,
-    }
-    datos = await _solicitar_json(url, parametros)
-    resultado = _a_formato_diario(datos, dias=10000)
-    _guardar_en_cache(clave, resultado)
-    return resultado
+    if clave in _solicitudes_activas:
+        return await _solicitudes_activas[clave]
+
+    async def _cargar() -> list[dict]:
+        url = f"{ajustes.api_open_meteo_archivo_base}/archive"
+        parametros = {
+            "latitude": latitud,
+            "longitude": longitud,
+            "elevation": altitud,
+            "timezone": ajustes.zona_horaria,
+            "start_date": fecha_inicio,
+            "end_date": fecha_fin,
+            "daily": _VARIABLES_DIARIAS,
+        }
+        datos = await _solicitar_json(url, parametros)
+        resultado = _a_formato_diario(datos, dias=10000)
+        _guardar_en_cache(clave, resultado)
+        return resultado
+
+    tarea = asyncio.create_task(_cargar())
+    _solicitudes_activas[clave] = tarea
+    try:
+        return await tarea
+    finally:
+        _solicitudes_activas.pop(clave, None)

@@ -34,7 +34,7 @@ class AjustesAplicacion(BaseSettings):
     rate_limit_requests: int = Field(default=100, ge=10, le=1000)
     rate_limit_window: int = Field(default=60, ge=10, le=3600)
     log_level: str = Field(default="INFO")
-    cache_ttl: int = Field(default=300, ge=60, le=3600)
+    cache_ttl: int = Field(default=900, ge=60, le=3600)
     batch_habilitado: bool = Field(default=True, description="Scheduler de pre-cálculo cada N minutos")
     batch_intervalo_minutos: int = Field(default=15, ge=5, le=120)
     batch_al_iniciar: bool = Field(default=True, description="Ejecutar batch al arrancar la API")
