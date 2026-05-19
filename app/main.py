@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from pathlib import Path
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -30,7 +31,7 @@ from app.services.analitica_agricola import (
     riesgo_sequia,
 )
 from app.services.marn_intermedio import generar_resumen_marn_api_v1
-from app.services.open_meteo import obtener_historico, obtener_pronostico
+from app.services.open_meteo import LimiteOpenMeteoError, obtener_historico, obtener_pronostico
 
 Base.metadata.create_all(bind=engine)
 ajustes = obtener_ajustes()
@@ -69,6 +70,19 @@ def _validar_coordenadas(latitud: float, longitud: float, altitud: float) -> Non
         raise HTTPException(status_code=422, detail="Coordenadas fuera del territorio de El Salvador")
 
 
+def _manejar_error_open_meteo(exc: Exception, contexto: str) -> HTTPException:
+    if isinstance(exc, LimiteOpenMeteoError):
+        return HTTPException(status_code=429, detail=str(exc))
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        return HTTPException(
+            status_code=429,
+            detail="Límite de consultas a Open-Meteo alcanzado. Espere 1–2 minutos e intente de nuevo.",
+        )
+    if isinstance(exc, httpx.HTTPStatusError):
+        return HTTPException(status_code=502, detail=f"Error al consultar Open-Meteo: {exc}")
+    return HTTPException(status_code=503, detail=f"{contexto}: {exc}")
+
+
 @app.get("/")
 async def inicio():
     archivo = frontend_path / "index.html"
@@ -91,8 +105,10 @@ async def forecast(entrada: SolicitudClima):
             },
             "dias": dias,
         }
+    except (LimiteOpenMeteoError, httpx.HTTPStatusError) as exc:
+        raise _manejar_error_open_meteo(exc, "Error al obtener pronóstico") from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Error al obtener pronóstico: {exc}") from exc
+        raise _manejar_error_open_meteo(exc, "Error al obtener pronóstico") from exc
 
 
 @app.post("/adjusted", response_model=RespuestaAjustada)
@@ -150,9 +166,12 @@ async def adjusted(entrada: SolicitudClima, sesion: Session = Depends(obtener_se
     except HTTPException:
         sesion.rollback()
         raise
+    except (LimiteOpenMeteoError, httpx.HTTPStatusError) as exc:
+        sesion.rollback()
+        raise _manejar_error_open_meteo(exc, "Error al procesar datos") from exc
     except Exception as exc:
         sesion.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al procesar datos: {exc}") from exc
+        raise _manejar_error_open_meteo(exc, "Error al procesar datos") from exc
 
 
 @app.post("/planting", response_model=RespuestaSiembra)
@@ -210,9 +229,12 @@ async def planting(entrada: SolicitudClima, sesion: Session = Depends(obtener_se
     except HTTPException:
         sesion.rollback()
         raise
+    except (LimiteOpenMeteoError, httpx.HTTPStatusError) as exc:
+        sesion.rollback()
+        raise _manejar_error_open_meteo(exc, "Error al generar recomendaciones") from exc
     except Exception as exc:
         sesion.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al generar recomendaciones: {exc}") from exc
+        raise _manejar_error_open_meteo(exc, "Error al generar recomendaciones") from exc
 
 
 @app.post("/insights", response_model=RespuestaInsights)
@@ -283,8 +305,10 @@ async def insights(entrada: SolicitudClima):
         }
     except HTTPException:
         raise
+    except (LimiteOpenMeteoError, httpx.HTTPStatusError) as exc:
+        raise _manejar_error_open_meteo(exc, "Error al generar insights") from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Error al generar insights: {exc}") from exc
+        raise _manejar_error_open_meteo(exc, "Error al generar insights") from exc
 
 
 @app.get(

@@ -256,7 +256,19 @@
       let visibleDays = 7;
       let forecastChart;
       let isLoading = false;
+      let refreshTimer = null;
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT };
+
+      function mensajeErrorAmigable(mensaje) {
+        if (mensaje.includes("429") || mensaje.includes("Too Many Requests")) {
+          return (
+            "Open-Meteo limitó las consultas por exceso de peticiones. " +
+            "Espere 1–2 minutos y recargue la página. " +
+            "Evite hacer clic repetido en el mapa; los datos se guardan en caché unos minutos."
+          );
+        }
+        return mensaje;
+      }
 
       function formatDateHeading(iso) {
         const [year, month, day] = iso.split("-");
@@ -330,15 +342,24 @@
       }
 
       function mostrarErrorPronostico(mensaje) {
+        const texto = mensajeErrorAmigable(mensaje);
         document.getElementById("todayBadge").textContent = "Error";
         document.getElementById("todayBadge").className = "badge red";
         document.getElementById("todayMetrics").style.display = "none";
         document.getElementById("todayLoading").style.display = "block";
         document.getElementById("todayLoading").innerHTML =
-          '<div class="error-message"><strong>No se pudo cargar el pronóstico</strong><p>' + mensaje + "</p></div>";
+          '<div class="error-message"><strong>No se pudo cargar el pronóstico</strong><p>' + texto + "</p></div>";
         document.getElementById("forecastLoading").innerHTML =
-          '<div class="error-message"><p>' + mensaje + "</p></div>";
+          '<div class="error-message"><p>' + texto + "</p></div>";
         document.getElementById("forecastTable").style.display = "none";
+      }
+
+      function programarActualizacion(delayMs) {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function () {
+          refreshTimer = null;
+          refreshDashboard();
+        }, delayMs);
       }
 
       function mostrarDatosMARN(data) {
@@ -685,7 +706,8 @@
       }
 
       function initMap() {
-        const map = L.map("map", { zoomControl: true }).setView([BASE_LAT, BASE_LON], 11);
+        const centroElSalvador = [13.79, -88.9];
+        const map = L.map("map", { zoomControl: true }).setView(centroElSalvador, 8);
         const selectedPointEl = document.getElementById("selectedPoint");
         const elSalvadorBounds = L.latLngBounds([13.1, -90.2], [14.6, -87.6]);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -698,35 +720,35 @@
         });
         const marker = L.marker([BASE_LAT, BASE_LON], { draggable: true }).addTo(map);
         const areaCircle = L.circle([BASE_LAT, BASE_LON], {
-          radius: 14000,
+          radius: 5000,
           color: "#2f7d32",
           fillColor: "#5fa860",
-          fillOpacity: 0.24,
+          fillOpacity: 0.2,
           weight: 2,
         }).addTo(map);
 
-        async function updateMarkerInfo(newLat, newLon) {
+        function updateMarkerInfo(newLat, newLon) {
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           selectedPointEl.textContent =
             "Punto seleccionado: " + newLat.toFixed(4) + ", " + newLon.toFixed(4);
           selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT };
-          await refreshDashboard();
+          programarActualizacion(700);
         }
 
-        map.on("click", async function (event) {
+        map.on("click", function (event) {
           const newLat = event.latlng.lat;
           const newLon = event.latlng.lng;
           if (!elSalvadorBounds.contains([newLat, newLon])) return;
-          await updateMarkerInfo(newLat, newLon);
+          updateMarkerInfo(newLat, newLon);
         });
-        marker.on("dragend", async function (event) {
+        marker.on("dragend", function (event) {
           const pos = event.target.getLatLng();
           if (!elSalvadorBounds.contains([pos.lat, pos.lng])) {
-            await updateMarkerInfo(BASE_LAT, BASE_LON);
+            updateMarkerInfo(BASE_LAT, BASE_LON);
             return;
           }
-          await updateMarkerInfo(pos.lat, pos.lng);
+          updateMarkerInfo(pos.lat, pos.lng);
         });
       }
 
