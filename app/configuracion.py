@@ -35,6 +35,15 @@ class AjustesAplicacion(BaseSettings):
     rate_limit_window: int = Field(default=60, ge=10, le=3600)
     log_level: str = Field(default="INFO")
     cache_ttl: int = Field(default=300, ge=60, le=3600)
+    batch_habilitado: bool = Field(default=True, description="Scheduler de pre-cálculo cada N minutos")
+    batch_intervalo_minutos: int = Field(default=15, ge=5, le=120)
+    batch_al_iniciar: bool = Field(default=True, description="Ejecutar batch al arrancar la API")
+    pronostico_max_edad_minutos: int = Field(
+        default=20,
+        ge=5,
+        le=120,
+        description="Si el cache supera esta edad, se refresca desde Open-Meteo al consultar",
+    )
     min_latitud: float = Field(default=13.0)
     max_latitud: float = Field(default=14.5)
     min_longitud: float = Field(default=-90.3)

@@ -4,8 +4,11 @@ Aplicacion climatica para agricultura usando datos gratuitos de Open-Meteo, ajus
 
 ## Caracteristicas
 
+- **Pre-cálculo batch** cada 15 min: consulta Open-Meteo para 14 ubicaciones y guarda en SQLite.
 - Backend en FastAPI con endpoints:
-  - `POST /forecast`
+  - `GET /api/pronostico?ubicacion=San Salvador&dias=7` (lee de base de datos)
+  - `GET /api/ubicaciones`
+  - `POST /forecast` (tiempo real, legacy)
   - `POST /adjusted`
   - `POST /planting`
 - Entradas por coordenadas: latitud, longitud y altitud.
@@ -32,10 +35,39 @@ Aplicacion climatica para agricultura usando datos gratuitos de Open-Meteo, ajus
 ## Ejecutar backend + frontend
 
 ```bash
+pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
 Abrir: <http://127.0.0.1:8000>
+
+Al iniciar, el servidor ejecuta el batch una vez y luego cada **15 minutos** (configurable en `.env`).
+
+## Batch manual / Cron
+
+```bash
+python scripts/actualizar_pronosticos.py
+```
+
+Cron Linux (`crontab -e`):
+
+```cron
+*/15 * * * * cd /ruta/clima && python scripts/actualizar_pronosticos.py >> logs/batch.log 2>&1
+```
+
+Windows: Programador de tareas cada 15 min con el comando anterior.
+
+## Ubicaciones pre-calculadas (14)
+
+San Salvador, Santa Ana, San Miguel, La Libertad, Sonsonate, Usulután, Chalatenango, Ahuachapán, Zacatecoluca, San Francisco Gotera, Cojutepeque, San Vicente, La Unión, Metapán.
+
+## Variables de entorno (.env)
+
+```env
+BATCH_HABILITADO=true
+BATCH_INTERVALO_MINUTOS=15
+BATCH_AL_INICIAR=true
+```
 
 ## Entrenar modelo
 

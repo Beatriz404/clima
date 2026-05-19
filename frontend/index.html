@@ -257,7 +257,28 @@
       let forecastChart;
       let isLoading = false;
       let refreshTimer = null;
-      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT };
+      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: "San Salvador" };
+      let ultimaActualizacionDb = null;
+
+      function mostrarIndicadorDatosReales(data) {
+        const meta = document.querySelector(".header .marn-meta");
+        if (!meta || !data) return;
+        const cuando = data.ultima_actualizacion
+          ? new Date(data.ultima_actualizacion).toLocaleString("es-SV")
+          : "recién consultado";
+        const origen =
+          data.origen === "open_meteo_tiempo_real"
+            ? "consulta directa a Open-Meteo"
+            : "base de datos (batch cada 15 min)";
+        meta.innerHTML =
+          "Datos <strong>reales</strong> de <strong>Open-Meteo</strong> · " +
+          data.ubicacion +
+          " · " +
+          origen +
+          " · Actualizado: " +
+          cuando +
+          " | <strong>MARN</strong> (SNET + estación SRT según ubicación del mapa)";
+      }
 
       function mensajeErrorAmigable(mensaje) {
         if (mensaje.includes("429") || mensaje.includes("Too Many Requests")) {
@@ -315,17 +336,34 @@
       }
 
       async function obtenerPronosticoReal(lat, lon, alt, dias = 15) {
-        const response = await fetch("/forecast", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ latitud: lat, longitud: lon, altitud: alt, dias: Math.min(dias, 16) }),
+        const qs = new URLSearchParams({
+          latitud: String(lat),
+          longitud: String(lon),
+          dias: String(Math.min(dias, 15)),
         });
+        if (selectedLocation.nombre) {
+          qs.set("ubicacion", selectedLocation.nombre);
+        }
+        const response = await fetch("/api/pronostico?" + qs.toString());
         if (!response.ok) {
           const detalle = await response.text();
           throw new Error("HTTP " + response.status + ": " + detalle);
         }
         const data = await response.json();
-        return data.dias.map(mapApiDay);
+        selectedLocation.nombre = data.ubicacion;
+        selectedLocation.lat = data.latitud;
+        selectedLocation.lon = data.longitud;
+        ultimaActualizacionDb = data.ultima_actualizacion;
+        mostrarIndicadorDatosReales(data);
+        return data.datos.map(function (dia) {
+          return mapApiDay({
+            fecha: dia.fecha,
+            temperatura_max: dia.temp_max,
+            temperatura_min: dia.temp_min,
+            lluvia_mm: dia.lluvia_mm,
+            humedad_relativa: dia.humedad,
+          });
+        });
       }
 
       async function obtenerMarnReal(lat, lon, alt) {
@@ -670,11 +708,17 @@
             selectedLocation.alt,
             15
           );
-          document.getElementById("calcLocation").textContent =
-            "Calculado para: " +
+          let textoUbicacion =
+            (selectedLocation.nombre || "Ubicación") +
+            " (" +
             selectedLocation.lat.toFixed(4) +
             ", " +
-            selectedLocation.lon.toFixed(4);
+            selectedLocation.lon.toFixed(4) +
+            ")";
+          if (ultimaActualizacionDb) {
+            textoUbicacion += " · Actualizado: " + new Date(ultimaActualizacionDb).toLocaleString("es-SV");
+          }
+          document.getElementById("calcLocation").textContent = "Calculado para: " + textoUbicacion;
           updateTodayCard();
           renderFocusDay();
           renderSummary();
@@ -732,7 +776,7 @@
           areaCircle.setLatLng([newLat, newLon]);
           selectedPointEl.textContent =
             "Punto seleccionado: " + newLat.toFixed(4) + ", " + newLon.toFixed(4);
-          selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT };
+          selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT, nombre: null };
           programarActualizacion(700);
         }
 

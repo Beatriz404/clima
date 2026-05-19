@@ -72,6 +72,12 @@ async def _solicitar_json(url: str, parametros: dict) -> dict:
     raise LimiteOpenMeteoError()
 
 
+_VARIABLES_DIARIAS = (
+    "temperature_2m_max,temperature_2m_min,precipitation_sum,"
+    "relative_humidity_2m_mean,windspeed_10m_max"
+)
+
+
 def _a_formato_diario(respuesta: dict, dias: int) -> list[dict]:
     diarios = respuesta["daily"]
     salida = []
@@ -81,11 +87,26 @@ def _a_formato_diario(respuesta: dict, dias: int) -> list[dict]:
                 "fecha": datetime.fromisoformat(diarios["time"][i]).date(),
                 "temperatura_max": float(diarios["temperature_2m_max"][i]),
                 "temperatura_min": float(diarios["temperature_2m_min"][i]),
-                "lluvia_mm": float(diarios["precipitation_sum"][i]),
+                "lluvia_mm": float(diarios["precipitation_sum"][i] or 0),
                 "humedad_relativa": float(diarios["relative_humidity_2m_mean"][i]),
+                "velocidad_viento": float(diarios["windspeed_10m_max"][i] or 0),
             }
         )
     return salida
+
+
+def _a_formato_siembra(respuesta: dict, dias: int) -> list[dict]:
+    return [
+        {
+            "fecha": d["fecha"],
+            "temp_max": d["temperatura_max"],
+            "temp_min": d["temperatura_min"],
+            "lluvia_mm": d["lluvia_mm"],
+            "humedad": int(round(d["humedad_relativa"])),
+            "velocidad_viento": round(d["velocidad_viento"], 2),
+        }
+        for d in _a_formato_diario(respuesta, dias)
+    ]
 
 
 async def obtener_pronostico(latitud: float, longitud: float, altitud: float, dias: int) -> list[dict]:
@@ -100,11 +121,35 @@ async def obtener_pronostico(latitud: float, longitud: float, altitud: float, di
         "longitude": longitud,
         "elevation": altitud,
         "timezone": ajustes.zona_horaria,
-        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_mean",
+        "daily": _VARIABLES_DIARIAS,
         "forecast_days": dias,
     }
     datos = await _solicitar_json(url, parametros)
     resultado = _a_formato_diario(datos, dias)
+    _guardar_en_cache(clave, resultado)
+    return resultado
+
+
+async def obtener_pronostico_siembra(
+    latitud: float, longitud: float, altitud: float, dias: int = 15
+) -> list[dict]:
+    """Pronóstico diario completo para persistencia en pronosticos_siembra."""
+    clave = _clave_cache("forecast_siembra", latitud, longitud, altitud, dias=dias)
+    en_cache = _obtener_de_cache(clave)
+    if en_cache is not None:
+        return en_cache
+
+    url = f"{ajustes.api_open_meteo_base}/forecast"
+    parametros = {
+        "latitude": latitud,
+        "longitude": longitud,
+        "elevation": altitud,
+        "timezone": ajustes.zona_horaria,
+        "daily": _VARIABLES_DIARIAS,
+        "forecast_days": min(dias, 16),
+    }
+    datos = await _solicitar_json(url, parametros)
+    resultado = _a_formato_siembra(datos, min(dias, 16))
     _guardar_en_cache(clave, resultado)
     return resultado
 
@@ -127,7 +172,7 @@ async def obtener_historico(
         "timezone": ajustes.zona_horaria,
         "start_date": fecha_inicio,
         "end_date": fecha_fin,
-        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_mean",
+        "daily": _VARIABLES_DIARIAS,
     }
     datos = await _solicitar_json(url, parametros)
     resultado = _a_formato_diario(datos, dias=10000)

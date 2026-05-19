@@ -129,3 +129,40 @@ class ResumenMarnApiV1(BaseModel):
 
 class EstadoIntegracionMarn(BaseModel):
     marn_complemento_configurado: bool
+
+
+class UbicacionDisponible(BaseModel):
+    nombre: str
+    latitud: float
+    longitud: float
+    altitud: float
+    region: str
+
+
+class DatoPronosticoSiembra(BaseModel):
+    fecha: date
+    temp_max: float
+    temp_min: float
+    lluvia_mm: float
+    humedad: int
+    velocidad_viento: float
+
+
+class RespuestaUbicaciones(BaseModel):
+    total: int
+    ubicaciones: list[UbicacionDisponible]
+
+
+class RespuestaPronosticoApi(BaseModel):
+    ubicacion: str
+    latitud: float
+    longitud: float
+    region: str
+    ultima_actualizacion: datetime | None
+    fuente: str = "Open-Meteo"
+    datos_reales: bool = True
+    origen: str = Field(
+        description="base_datos = cache del batch; open_meteo_tiempo_real = consulta directa reciente"
+    )
+    dias: int
+    datos: list[DatoPronosticoSiembra]

@@ -1,7 +1,10 @@
+import logging
+from contextlib import asynccontextmanager
 from datetime import date, datetime
 from pathlib import Path
 
 import httpx
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -10,17 +13,27 @@ from sqlalchemy.orm import Session
 
 from app.base_datos import Base, engine, obtener_sesion
 from app.configuracion import obtener_ajustes
+from app.data.ubicaciones_salvador import (
+    UBICACIONES_SALVADOR,
+    buscar_por_nombre,
+    ubicacion_mas_cercana,
+)
 from app.esquemas import (
     EstadoIntegracionMarn,
     RecomendacionDia,
     RespuestaAjustada,
     RespuestaInsights,
     RespuestaPronostico,
+    RespuestaPronosticoApi,
     RespuestaSiembra,
+    RespuestaUbicaciones,
     ResumenMarnApiV1,
     SolicitudClima,
+    UbicacionDisponible,
 )
-from app.modelos import RecomendacionSiembra, RegistroClimatico
+from app.modelos import PronosticoSiembra, RecomendacionSiembra, RegistroClimatico
+from app.services.batch_pronostico import ejecutar_actualizacion_batch
+from app.services.pronostico_servicio import obtener_pronostico_garantizado
 from app.services.agricultura import evaluar_dia_siembra
 from app.services.ajuste_ml import modelo_ajuste_global
 from app.services.analitica_agricola import (
@@ -33,14 +46,42 @@ from app.services.analitica_agricola import (
 from app.services.marn_intermedio import generar_resumen_marn_api_v1
 from app.services.open_meteo import LimiteOpenMeteoError, obtener_historico, obtener_pronostico
 
-Base.metadata.create_all(bind=engine)
 ajustes = obtener_ajustes()
+logger = logging.getLogger(__name__)
+scheduler = AsyncIOScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logging.basicConfig(level=getattr(logging, ajustes.log_level, logging.INFO))
+    Base.metadata.create_all(bind=engine)
+    if ajustes.batch_habilitado:
+        scheduler.add_job(
+            ejecutar_actualizacion_batch,
+            "interval",
+            minutes=ajustes.batch_intervalo_minutos,
+            id="batch_pronosticos_siembra",
+            replace_existing=True,
+        )
+        scheduler.start()
+        logger.info("Scheduler batch activo cada %d minutos", ajustes.batch_intervalo_minutos)
+        if ajustes.batch_al_iniciar:
+            await ejecutar_actualizacion_batch()
+    yield
+    if scheduler.running:
+        scheduler.shutdown()
+
 
 app = FastAPI(
     title=ajustes.nombre_app,
     version="1.0.0",
     description="API con datos de Open-Meteo y resumen del portal MARN El Salvador",
+    lifespan=lifespan,
     openapi_tags=[
+        {
+            "name": "Pronóstico pre-calculado",
+            "description": "Lectura desde base de datos (batch cada 15 min).",
+        },
         {
             "name": "Nacional MARN (API pública documentada)",
             "description": "Resumen informativo del portal público MARN.",
@@ -81,6 +122,63 @@ def _manejar_error_open_meteo(exc: Exception, contexto: str) -> HTTPException:
     if isinstance(exc, httpx.HTTPStatusError):
         return HTTPException(status_code=502, detail=f"Error al consultar Open-Meteo: {exc}")
     return HTTPException(status_code=503, detail=f"{contexto}: {exc}")
+
+
+def _resolver_ubicacion(ubicacion: str | None, latitud: float | None, longitud: float | None):
+    if ubicacion:
+        encontrada = buscar_por_nombre(ubicacion)
+        if not encontrada:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Ubicación '{ubicacion}' no encontrada. Use GET /api/ubicaciones",
+            )
+        return encontrada
+    if latitud is not None and longitud is not None:
+        if not ajustes.validate_coordinates(latitud, longitud, 650.0):
+            raise HTTPException(status_code=422, detail="Coordenadas fuera del territorio de El Salvador")
+        return ubicacion_mas_cercana(latitud, longitud)
+    raise HTTPException(
+        status_code=400,
+        detail="Indique ubicacion=... o latitud=... y longitud=...",
+    )
+
+
+@app.get("/api/ubicaciones", response_model=RespuestaUbicaciones, tags=["Pronóstico pre-calculado"])
+async def api_ubicaciones():
+    lista = [
+        UbicacionDisponible(
+            nombre=u.nombre,
+            latitud=u.latitud,
+            longitud=u.longitud,
+            altitud=u.altitud,
+            region=u.region,
+        )
+        for u in UBICACIONES_SALVADOR
+    ]
+    return RespuestaUbicaciones(total=len(lista), ubicaciones=lista)
+
+
+@app.get("/api/pronostico", response_model=RespuestaPronosticoApi, tags=["Pronóstico pre-calculado"])
+async def api_pronostico(
+    ubicacion: str | None = Query(None, description="Nombre de la ciudad (ej. San Salvador)"),
+    latitud: float | None = Query(None, ge=13.0, le=14.5),
+    longitud: float | None = Query(None, ge=-90.3, le=-87.5),
+    dias: int = Query(7, ge=1, le=15),
+    sesion: Session = Depends(obtener_sesion),
+):
+    destino = _resolver_ubicacion(ubicacion, latitud, longitud)
+    try:
+        return await obtener_pronostico_garantizado(sesion, destino, dias)
+    except LimiteOpenMeteoError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except (httpx.HTTPStatusError, ValueError) as exc:
+        raise _manejar_error_open_meteo(exc, f"Error al obtener pronóstico real para {destino.nombre}") from exc
+
+
+@app.post("/api/admin/actualizar-pronosticos", tags=["Pronóstico pre-calculado"])
+async def api_actualizar_pronosticos_manual():
+    """Dispara el batch de inmediato (útil para pruebas)."""
+    return await ejecutar_actualizacion_batch()
 
 
 @app.get("/")
