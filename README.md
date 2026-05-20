@@ -20,7 +20,8 @@ Aplicacion climatica para agricultura usando datos gratuitos de Open-Meteo, ajus
 ## Estructura
 
 - `app/main.py`: API principal y rutas.
-- `app/services/open_meteo.py`: consumo de Open-Meteo (forecast + historicos).
+- `app/services/open_meteo_proxy.py`: proxy asíncrono Open-Meteo con Redis (caché, candados, anti-429).
+- `app/services/open_meteo.py`: formateo de pronósticos e históricos (usa el proxy).
 - `app/services/ajuste_ml.py`: inferencia del modelo de ajuste.
 - `app/services/agricultura.py`: logica de recomendacion de siembra.
 - `app/ml/entrenar_modelo.py`: entrenamiento del modelo.
@@ -67,7 +68,23 @@ San Salvador, Santa Ana, San Miguel, La Libertad, Sonsonate, Usulután, Chalaten
 BATCH_HABILITADO=true
 BATCH_INTERVALO_MINUTOS=15
 BATCH_AL_INICIAR=true
+
+# Proxy Open-Meteo (Redis obligatorio en producción)
+REDIS_URL=redis://localhost:6379/0
+REDIS_FORECAST_TTL=1800
+REDIS_ARCHIVE_TTL=604800
+OPEN_METEO_MAX_CONCURRENT=2
 ```
+
+En **Render** u otro PaaS, añade un add-on Redis y define `REDIS_URL`. Las pruebas usan `REDIS_URL=memory://` sin servidor Redis.
+
+### Proxy anti-429
+
+- Caché forecast: 30 min (`clima:forecast:lat:lon:alt`)
+- Caché archive: 7 días (`clima:archive:...:start:end`)
+- Candado distribuido `lock:...` con `SET NX EX`; competidores esperan hasta 10 s
+- Coordenadas agrupadas: lat/lon 3 decimales, altitud a la decena
+- Backoff ante 429 real: 1 s, 3 s, 7 s
 
 ## Entrenar modelo
 

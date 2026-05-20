@@ -27,7 +27,8 @@ COORDS_SANTA_ANA = {"latitud": 13.977, "longitud": -89.56, "altitud": 650}
 
 @pytest.fixture
 def cliente():
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 def test_configuracion_modo_auto_por_defecto():
@@ -56,8 +57,15 @@ def test_frontend_sin_datos_falsos():
     assert 'fetch("/forecast"' in html
 
 
+@pytest.fixture
+async def proxy_iniciado():
+    from app.services.open_meteo_proxy import iniciar_proxy
+
+    await iniciar_proxy()
+
+
 @pytest.mark.asyncio
-async def test_open_meteo_pronostico_real():
+async def test_open_meteo_pronostico_real(proxy_iniciado):
     dias = await obtener_pronostico(
         PAYLOAD_SAN_SALVADOR["latitud"],
         PAYLOAD_SAN_SALVADOR["longitud"],

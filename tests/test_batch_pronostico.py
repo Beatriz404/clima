@@ -17,7 +17,8 @@ from app.services.pronostico_repositorio import guardar_pronosticos_ubicacion
 
 @pytest.fixture
 def cliente():
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 def test_catorce_ubicaciones_configuradas():
@@ -70,8 +71,15 @@ def test_api_pronostico_desde_db(cliente):
     assert datos["datos"][0]["temp_max"] == 32.0
 
 
+@pytest.fixture
+async def proxy_iniciado():
+    from app.services.open_meteo_proxy import iniciar_proxy
+
+    await iniciar_proxy()
+
+
 @pytest.mark.asyncio
-async def test_open_meteo_pronostico_siembra_real():
+async def test_open_meteo_pronostico_siembra_real(proxy_iniciado):
     from app.data.ubicaciones_salvador import buscar_por_nombre
     from app.services.open_meteo import obtener_pronostico_siembra
 

@@ -35,6 +35,18 @@ class AjustesAplicacion(BaseSettings):
     rate_limit_window: int = Field(default=60, ge=10, le=3600)
     log_level: str = Field(default="INFO")
     cache_ttl: int = Field(default=900, ge=60, le=3600)
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="URL Redis. Use memory:// para pruebas sin servidor Redis",
+    )
+    redis_forecast_ttl: int = Field(default=1800, ge=60, le=86400)
+    redis_archive_ttl: int = Field(default=604800, ge=3600, le=2592000)
+    redis_lock_ttl: int = Field(default=30, ge=5, le=120)
+    redis_lock_espera_max: float = Field(default=10.0, ge=2.0, le=60.0)
+    redis_lock_poll_interval: float = Field(default=0.15, ge=0.05, le=2.0)
+    open_meteo_max_concurrent: int = Field(default=2, ge=1, le=20)
+    httpx_max_connections: int = Field(default=10, ge=2, le=100)
+    httpx_max_keepalive_connections: int = Field(default=5, ge=1, le=50)
     batch_habilitado: bool = Field(default=True, description="Scheduler de pre-cálculo cada N minutos")
     batch_intervalo_minutos: int = Field(default=15, ge=5, le=120)
     batch_al_iniciar: bool = Field(default=True, description="Ejecutar batch al arrancar la API")

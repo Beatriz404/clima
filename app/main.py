@@ -44,7 +44,13 @@ from app.services.analitica_agricola import (
     riesgo_sequia,
 )
 from app.services.marn_intermedio import generar_resumen_marn_api_v1
-from app.services.open_meteo import LimiteOpenMeteoError, obtener_historico, obtener_pronostico
+from app.services.open_meteo import (
+    LimiteOpenMeteoError,
+    ProxyServicioNoDisponibleError,
+    obtener_historico,
+    obtener_pronostico,
+)
+from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy
 
 ajustes = obtener_ajustes()
 logger = logging.getLogger(__name__)
@@ -54,6 +60,7 @@ scheduler = AsyncIOScheduler()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=getattr(logging, ajustes.log_level, logging.INFO))
+    await iniciar_proxy()
     Base.metadata.create_all(bind=engine)
     if ajustes.batch_habilitado:
         scheduler.add_job(
@@ -70,6 +77,7 @@ async def lifespan(app: FastAPI):
     yield
     if scheduler.running:
         scheduler.shutdown()
+    await cerrar_proxy()
 
 
 app = FastAPI(
@@ -112,6 +120,11 @@ def _validar_coordenadas(latitud: float, longitud: float, altitud: float) -> Non
 
 
 def _manejar_error_open_meteo(exc: Exception, contexto: str) -> HTTPException:
+    if isinstance(exc, ProxyServicioNoDisponibleError):
+        return HTTPException(
+            status_code=503,
+            detail=str(exc) or "Servicio de clima temporalmente no disponible. Intente en unos segundos.",
+        )
     if isinstance(exc, LimiteOpenMeteoError):
         return HTTPException(status_code=429, detail=str(exc))
     if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
