@@ -20,7 +20,7 @@ Aplicacion climatica para agricultura usando datos gratuitos de Open-Meteo, ajus
 ## Estructura
 
 - `app/main.py`: API principal y rutas.
-- `app/services/open_meteo_proxy.py`: proxy asíncrono Open-Meteo con Redis (caché, candados, anti-429).
+- `app/services/open_meteo_proxy.py`: proxy Open-Meteo (caché en memoria, anti-429, datos reales).
 - `app/services/open_meteo.py`: formateo de pronósticos e históricos (usa el proxy).
 - `app/services/ajuste_ml.py`: inferencia del modelo de ajuste.
 - `app/services/agricultura.py`: logica de recomendacion de siembra.
@@ -69,22 +69,21 @@ BATCH_HABILITADO=true
 BATCH_INTERVALO_MINUTOS=15
 BATCH_AL_INICIAR=true
 
-# Proxy Open-Meteo (Redis obligatorio en producción)
-REDIS_URL=redis://localhost:6379/0
-REDIS_FORECAST_TTL=1800
-REDIS_ARCHIVE_TTL=604800
+# Proxy Open-Meteo (caché en memoria, sin Redis)
+CACHE_FORECAST_TTL=1800
+CACHE_ARCHIVE_TTL=604800
 OPEN_METEO_MAX_CONCURRENT=2
 ```
 
-En **Render** u otro PaaS, añade un add-on Redis y define `REDIS_URL`. Las pruebas usan `REDIS_URL=memory://` sin servidor Redis.
+En **Render** no hace falta Redis: elimine `REDIS_URL` si la tenía definida. La API arranca sola.
 
-### Proxy anti-429
+### Proxy anti-429 (memoria)
 
-- Caché forecast: 30 min (`clima:forecast:lat:lon:alt`)
-- Caché archive: 7 días (`clima:archive:...:start:end`)
-- Candado distribuido `lock:...` con `SET NX EX`; competidores esperan hasta 10 s
+- Datos **siempre reales** desde `api.open-meteo.com`
+- Caché forecast: 30 min; archive: 7 días
+- Peticiones concurrentes iguales → una sola llamada HTTP
 - Coordenadas agrupadas: lat/lon 3 decimales, altitud a la decena
-- Backoff ante 429 real: 1 s, 3 s, 7 s
+- Backoff ante 429: 1 s, 3 s, 7 s; máx. 2 peticiones simultáneas a Open-Meteo
 
 ## Entrenar modelo
 

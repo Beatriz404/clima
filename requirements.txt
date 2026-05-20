@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 httpx
-redis>=5.0.0
 sqlalchemy
 pydantic
 pydantic-settings

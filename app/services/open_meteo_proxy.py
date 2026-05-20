@@ -1,8 +1,7 @@
 """
-Proxy asíncrono Open-Meteo con caché Redis y bloqueos distribuidos.
+Proxy asíncrono Open-Meteo: caché en memoria, deduplicación y control de concurrencia.
 
-Elimina peticiones duplicadas concurrentes sobre las mismas coordenadas
-y reduce errores HTTP 429 de la API pública.
+Datos siempre reales desde api.open-meteo.com. Sin Redis ni dependencias externas de caché.
 """
 
 from __future__ import annotations
@@ -10,28 +9,19 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import secrets
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import monotonic
-from collections.abc import Awaitable, Callable
-from typing import Any, Protocol
+from typing import Any
 
 import httpx
-import redis.asyncio as aioredis
 
 from app.configuracion import AjustesAplicacion, obtener_ajustes
 
 logger = logging.getLogger(__name__)
 
-_LIBERAR_LOCK_LUA = """
-if redis.call('get', KEYS[1]) == ARGV[1] then
-    return redis.call('del', KEYS[1])
-else
-    return 0
-end
-"""
-
 _BACKOFF_429_SEGUNDOS = (1, 3, 7)
+_FORECAST_DIAS_MAX = 15
 
 
 class LimiteOpenMeteoError(Exception):
@@ -39,7 +29,7 @@ class LimiteOpenMeteoError(Exception):
 
 
 class ProxyServicioNoDisponibleError(Exception):
-    """Timeout o fallo al obtener datos vía proxy (caché / candado)."""
+    """Fallo al obtener datos del proxy."""
 
 
 def redondear_coordenadas(latitud: float, longitud: float, altitud: float) -> tuple[float, float, int]:
@@ -63,117 +53,27 @@ def clave_cache_archive(
     return f"clima:archive:{lat:.3f}:{lon:.3f}:{alt}:{fecha_inicio}:{fecha_fin}"
 
 
-def clave_lock(cache_key: str) -> str:
-    return f"lock:{cache_key}"
-
-
-class AlmacenCache(Protocol):
-    async def get(self, clave: str) -> str | None: ...
-    async def set(self, clave: str, valor: str, ex: int) -> None: ...
-    async def set_nx(self, clave: str, valor: str, ex: int) -> bool: ...
-    async def eval_liberar_lock(self, clave_lock: str, token: str) -> None: ...
-    async def cerrar(self) -> None: ...
-
-
-class AlmacenRedis:
-    def __init__(self, cliente: aioredis.Redis) -> None:
-        self._redis = cliente
-
-    async def get(self, clave: str) -> str | None:
-        valor = await self._redis.get(clave)
-        if valor is None:
-            return None
-        return valor.decode() if isinstance(valor, bytes) else str(valor)
-
-    async def set(self, clave: str, valor: str, ex: int) -> None:
-        await self._redis.set(clave, valor, ex=ex)
-
-    async def set_nx(self, clave: str, valor: str, ex: int) -> bool:
-        return bool(await self._redis.set(clave, valor, nx=True, ex=ex))
-
-    async def eval_liberar_lock(self, clave_lock: str, token: str) -> None:
-        await self._redis.eval(_LIBERAR_LOCK_LUA, 1, clave_lock, token)
-
-    async def cerrar(self) -> None:
-        await self._redis.aclose()
-
-
-class AlmacenMemoria:
-    """Backend en memoria para pruebas (REDIS_URL=memory://)."""
-
-    def __init__(self) -> None:
-        self._datos: dict[str, tuple[float, str]] = {}
-        self._locks: dict[str, tuple[str, float]] = {}
-        self._mutex = asyncio.Lock()
-
-    async def get(self, clave: str) -> str | None:
-        async with self._mutex:
-            entrada = self._datos.get(clave)
-            if not entrada:
-                return None
-            expira, valor = entrada
-            if monotonic() > expira:
-                self._datos.pop(clave, None)
-                return None
-            return valor
-
-    async def set(self, clave: str, valor: str, ex: int) -> None:
-        async with self._mutex:
-            self._datos[clave] = (monotonic() + ex, valor)
-
-    async def set_nx(self, clave: str, valor: str, ex: int) -> bool:
-        async with self._mutex:
-            ahora = monotonic()
-            lock = self._locks.get(clave)
-            if lock and lock[1] > ahora:
-                return False
-            self._locks[clave] = (valor, ahora + ex)
-            return True
-
-    async def eval_liberar_lock(self, clave_lock: str, token: str) -> None:
-        async with self._mutex:
-            lock = self._locks.get(clave_lock)
-            if lock and lock[0] == token:
-                self._locks.pop(clave_lock, None)
-
-    async def cerrar(self) -> None:
-        self._datos.clear()
-        self._locks.clear()
-
-
 class OpenMeteoProxy:
-    """Encapsula /v1/forecast y /v1/archive con caché Redis y mutex distribuido."""
+    """
+    Encapsula /v1/forecast y /v1/archive.
+
+    - Caché TTL en memoria (forecast 30 min, archive 7 días)
+    - Peticiones concurrentes idénticas comparten una sola llamada HTTP
+    - Semáforo global + backoff ante 429
+    """
 
     def __init__(self, ajustes: AjustesAplicacion | None = None) -> None:
         self.ajustes = ajustes or obtener_ajustes()
-        self._almacen: AlmacenCache | None = None
+        self._cache: dict[str, tuple[float, dict]] = {}
+        self._tareas_activas: dict[str, asyncio.Task[dict]] = {}
+        self._mutex_cache = asyncio.Lock()
         self._cliente_http: httpx.AsyncClient | None = None
         self._semaforo = asyncio.Semaphore(self.ajustes.open_meteo_max_concurrent)
 
     async def iniciar(self) -> None:
-        if (
-            self._almacen is not None
-            and self._cliente_http is not None
-            and not self._cliente_http.is_closed
-        ):
+        if self._cliente_http is not None and not self._cliente_http.is_closed:
             return
         await self.cerrar()
-
-        url = self.ajustes.redis_url.strip()
-        if url == "memory://" or url == "memory":
-            self._almacen = AlmacenMemoria()
-            logger.info("Proxy Open-Meteo: almacén en memoria (pruebas/desarrollo)")
-        else:
-            cliente = aioredis.from_url(
-                url,
-                encoding="utf-8",
-                decode_responses=False,
-                socket_connect_timeout=5,
-            )
-            await cliente.ping()
-            self._almacen = AlmacenRedis(cliente)
-            logger.info("Proxy Open-Meteo: Redis conectado en %s", url.split("@")[-1])
-
         limites = httpx.Limits(
             max_connections=self.ajustes.httpx_max_connections,
             max_keepalive_connections=self.ajustes.httpx_max_keepalive_connections,
@@ -182,41 +82,45 @@ class OpenMeteoProxy:
             timeout=self.ajustes.timeout_conexion,
             limits=limites,
         )
+        logger.info("Proxy Open-Meteo iniciado (caché en memoria, datos reales)")
 
     async def cerrar(self) -> None:
+        for tarea in list(self._tareas_activas.values()):
+            if not tarea.done():
+                tarea.cancel()
+        self._tareas_activas.clear()
+        self._cache.clear()
+
         if self._cliente_http is not None:
             await self._cliente_http.aclose()
             self._cliente_http = None
-        if self._almacen is not None:
-            await self._almacen.cerrar()
-            self._almacen = None
 
-    def _requiere_iniciado(self) -> AlmacenCache:
-        if self._almacen is None or self._cliente_http is None:
-            raise RuntimeError("OpenMeteoProxy no iniciado; use iniciar_proxy() en el lifespan")
-        return self._almacen
+    def limpiar_cache(self) -> None:
+        self._cache.clear()
+
+    def estadisticas_cache(self) -> dict[str, int]:
+        ahora = monotonic()
+        validas = sum(1 for expira, _ in self._cache.values() if expira > ahora)
+        return {
+            "entradas_validas": validas,
+            "entradas_totales": len(self._cache),
+            "peticiones_en_vuelo": len(self._tareas_activas),
+        }
 
     async def _leer_cache(self, clave: str) -> dict | None:
-        almacen = self._requiere_iniciado()
-        crudo = await almacen.get(clave)
-        if crudo is None:
-            return None
-        try:
-            return json.loads(crudo)
-        except json.JSONDecodeError:
-            logger.warning("Entrada de caché corrupta, ignorando: %s", clave)
-            return None
+        async with self._mutex_cache:
+            entrada = self._cache.get(clave)
+            if not entrada:
+                return None
+            expira, datos = entrada
+            if monotonic() > expira:
+                self._cache.pop(clave, None)
+                return None
+            return datos
 
     async def _escribir_cache(self, clave: str, datos: dict, ttl: int) -> None:
-        almacen = self._requiere_iniciado()
-        await almacen.set(clave, json.dumps(datos, ensure_ascii=False), ex=ttl)
-
-    async def _liberar_lock(self, clave_lock: str, token: str) -> None:
-        almacen = self._requiere_iniciado()
-        try:
-            await almacen.eval_liberar_lock(clave_lock, token)
-        except Exception:
-            logger.exception("No se pudo liberar candado %s", clave_lock)
+        async with self._mutex_cache:
+            self._cache[clave] = (monotonic() + ttl, datos)
 
     async def _solicitar_json(self, url: str, parametros: dict[str, Any]) -> dict:
         if self._cliente_http is None:
@@ -242,48 +146,41 @@ class OpenMeteoProxy:
 
     async def _obtener_con_cache(
         self,
-        clave_cache: str,
+        clave: str,
         ttl: int,
         obtener_remoto: Callable[[], Awaitable[dict]],
-        reintento: int = 0,
     ) -> dict:
-        almacen = self._requiere_iniciado()
-        clave_lock = clave_lock_cache(clave_cache)
-
-        en_cache = await self._leer_cache(clave_cache)
+        en_cache = await self._leer_cache(clave)
         if en_cache is not None:
             return en_cache
 
-        token = secrets.token_hex(16)
-        adquirio = await almacen.set_nx(clave_lock, token, ex=self.ajustes.redis_lock_ttl)
-
-        if adquirio:
+        tarea_existente = self._tareas_activas.get(clave)
+        if tarea_existente is not None:
             try:
-                en_cache = await self._leer_cache(clave_cache)
-                if en_cache is not None:
-                    return en_cache
+                return await tarea_existente
+            except asyncio.CancelledError:
+                self._tareas_activas.pop(clave, None)
+                raise
 
+        async def _cargar() -> dict:
+            try:
+                en_cache_local = await self._leer_cache(clave)
+                if en_cache_local is not None:
+                    return en_cache_local
                 datos = await obtener_remoto()
-                await self._escribir_cache(clave_cache, datos, ttl)
+                await self._escribir_cache(clave, datos, ttl)
                 return datos
             finally:
-                await self._liberar_lock(clave_lock, token)
+                self._tareas_activas.pop(clave, None)
 
-        limite = monotonic() + self.ajustes.redis_lock_espera_max
-        while monotonic() < limite:
-            await asyncio.sleep(self.ajustes.redis_lock_poll_interval)
-            en_cache = await self._leer_cache(clave_cache)
-            if en_cache is not None:
-                return en_cache
-
-        if reintento < 1:
-            return await self._obtener_con_cache(
-                clave_cache, ttl, obtener_remoto, reintento=reintento + 1
-            )
-
-        raise ProxyServicioNoDisponibleError(
-            f"Timeout ({self.ajustes.redis_lock_espera_max}s) esperando datos en caché para {clave_cache}"
-        )
+        tarea = asyncio.create_task(_cargar())
+        self._tareas_activas[clave] = tarea
+        try:
+            return await tarea
+        except Exception:
+            if not tarea.done():
+                tarea.cancel()
+            raise
 
     async def consultar_forecast(
         self,
@@ -291,11 +188,11 @@ class OpenMeteoProxy:
         longitud: float,
         altitud: float,
         *,
-        forecast_days: int = 15,
+        forecast_days: int = _FORECAST_DIAS_MAX,
         variables_diarias: str,
     ) -> dict:
         clave = clave_cache_forecast(latitud, longitud, altitud)
-        lat, lon, alt = redondear_coordenadas(latitud, longitud, altitud)
+        lat, lon, _alt = redondear_coordenadas(latitud, longitud, altitud)
 
         async def _fetch() -> dict:
             url = f"{self.ajustes.api_open_meteo_base}/forecast"
@@ -305,11 +202,11 @@ class OpenMeteoProxy:
                 "elevation": altitud,
                 "timezone": self.ajustes.zona_horaria,
                 "daily": variables_diarias,
-                "forecast_days": forecast_days,
+                "forecast_days": min(forecast_days, _FORECAST_DIAS_MAX),
             }
             return await self._solicitar_json(url, parametros)
 
-        return await self._obtener_con_cache(clave, self.ajustes.redis_forecast_ttl, _fetch)
+        return await self._obtener_con_cache(clave, self.ajustes.cache_forecast_ttl, _fetch)
 
     async def consultar_archive(
         self,
@@ -322,7 +219,7 @@ class OpenMeteoProxy:
         variables_diarias: str,
     ) -> dict:
         clave = clave_cache_archive(latitud, longitud, altitud, fecha_inicio, fecha_fin)
-        lat, lon, alt = redondear_coordenadas(latitud, longitud, altitud)
+        lat, lon, _alt = redondear_coordenadas(latitud, longitud, altitud)
 
         async def _fetch() -> dict:
             url = f"{self.ajustes.api_open_meteo_archivo_base}/archive"
@@ -337,7 +234,7 @@ class OpenMeteoProxy:
             }
             return await self._solicitar_json(url, parametros)
 
-        return await self._obtener_con_cache(clave, self.ajustes.redis_archive_ttl, _fetch)
+        return await self._obtener_con_cache(clave, self.ajustes.cache_archive_ttl, _fetch)
 
 
 _proxy_global: OpenMeteoProxy | None = None

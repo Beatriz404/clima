@@ -1,4 +1,4 @@
-"""Capa de dominio: formatea respuestas Open-Meteo obtenidas vía proxy Redis."""
+"""Capa de dominio: formatea respuestas reales de Open-Meteo vía proxy en memoria."""
 
 from collections.abc import Callable
 from datetime import datetime
@@ -27,8 +27,10 @@ __all__ = [
 
 
 def limpiar_cache() -> None:
-    """Compatibilidad: la caché vive en Redis; no hay memoria local que limpiar."""
-    pass
+    try:
+        obtener_proxy().limpiar_cache()
+    except RuntimeError:
+        pass
 
 
 def _a_formato_diario(respuesta: dict, dias: int) -> list[dict]:

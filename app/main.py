@@ -50,7 +50,7 @@ from app.services.open_meteo import (
     obtener_historico,
     obtener_pronostico,
 )
-from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy
+from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy, obtener_proxy
 
 ajustes = obtener_ajustes()
 logger = logging.getLogger(__name__)
@@ -154,6 +154,22 @@ def _resolver_ubicacion(ubicacion: str | None, latitud: float | None, longitud: 
         status_code=400,
         detail="Indique ubicacion=... o latitud=... y longitud=...",
     )
+
+
+@app.get("/health")
+async def health():
+    """Estado del servicio y caché Open-Meteo."""
+    try:
+        proxy = obtener_proxy()
+        stats = proxy.estadisticas_cache()
+        return {
+            "estado": "ok",
+            "fuente_datos": "Open-Meteo (api.open-meteo.com)",
+            "cache": "memoria",
+            **stats,
+        }
+    except RuntimeError:
+        return {"estado": "iniciando"}
 
 
 @app.get("/api/ubicaciones", response_model=RespuestaUbicaciones, tags=["Pronóstico pre-calculado"])

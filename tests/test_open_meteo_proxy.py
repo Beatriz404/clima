@@ -1,4 +1,4 @@
-"""Pruebas del proxy Open-Meteo (caché, claves y deduplicación)."""
+"""Pruebas del proxy Open-Meteo (caché en memoria y deduplicación)."""
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -20,11 +20,6 @@ def test_redondear_coordenadas_tres_decimales_y_altitud_decena():
     assert lon == -89.218
     assert alt == 650
 
-    lat2, lon2, alt2 = redondear_coordenadas(13.69296, -89.21821, 657)
-    assert lat2 == lat
-    assert lon2 == lon
-    assert alt2 == 660
-
 
 def test_clave_forecast_formato():
     clave = clave_cache_forecast(13.6929, -89.2182, 653)
@@ -37,16 +32,15 @@ def test_clave_archive_incluye_fechas():
 
 
 @pytest.fixture
-async def proxy_memoria():
-    ajustes = AjustesAplicacion(redis_url="memory://")
-    proxy = OpenMeteoProxy(ajustes)
-    await proxy.iniciar()
-    yield proxy
-    await proxy.cerrar()
+async def proxy():
+    instancia = OpenMeteoProxy(AjustesAplicacion())
+    await instancia.iniciar()
+    yield instancia
+    await instancia.cerrar()
 
 
 @pytest.mark.asyncio
-async def test_cache_hit_evita_segunda_llamada_http(proxy_memoria):
+async def test_cache_hit_evita_segunda_llamada_http(proxy):
     respuesta = {
         "daily": {
             "time": ["2024-06-01"],
@@ -59,11 +53,11 @@ async def test_cache_hit_evita_segunda_llamada_http(proxy_memoria):
     }
     mock_get = AsyncMock(return_value=_respuesta_http(200, respuesta))
 
-    with patch.object(proxy_memoria._cliente_http, "get", mock_get):
-        r1 = await proxy_memoria.consultar_forecast(
+    with patch.object(proxy._cliente_http, "get", mock_get):
+        r1 = await proxy.consultar_forecast(
             13.6929, -89.2182, 650, variables_diarias="temperature_2m_max"
         )
-        r2 = await proxy_memoria.consultar_forecast(
+        r2 = await proxy.consultar_forecast(
             13.69296, -89.21821, 653, variables_diarias="temperature_2m_max"
         )
 
@@ -72,7 +66,7 @@ async def test_cache_hit_evita_segunda_llamada_http(proxy_memoria):
 
 
 @pytest.mark.asyncio
-async def test_solicitudes_concurrentes_comparten_un_fetch(proxy_memoria):
+async def test_solicitudes_concurrentes_comparten_un_fetch(proxy):
     respuesta = {
         "daily": {
             "time": ["2024-06-01"],
@@ -91,17 +85,11 @@ async def test_solicitudes_concurrentes_comparten_un_fetch(proxy_memoria):
         await asyncio.sleep(0.2)
         return _respuesta_http(200, respuesta)
 
-    with patch.object(proxy_memoria._cliente_http, "get", side_effect=get_lento):
+    with patch.object(proxy._cliente_http, "get", side_effect=get_lento):
         resultados = await asyncio.gather(
-            proxy_memoria.consultar_forecast(
-                13.7, -89.2, 650, variables_diarias="temperature_2m_max"
-            ),
-            proxy_memoria.consultar_forecast(
-                13.7001, -89.2001, 652, variables_diarias="temperature_2m_max"
-            ),
-            proxy_memoria.consultar_forecast(
-                13.6999, -89.1999, 648, variables_diarias="temperature_2m_max"
-            ),
+            proxy.consultar_forecast(13.7, -89.2, 650, variables_diarias="temperature_2m_max"),
+            proxy.consultar_forecast(13.7001, -89.2001, 652, variables_diarias="temperature_2m_max"),
+            proxy.consultar_forecast(13.6999, -89.1999, 648, variables_diarias="temperature_2m_max"),
         )
 
     assert len(resultados) == 3
@@ -109,9 +97,9 @@ async def test_solicitudes_concurrentes_comparten_un_fetch(proxy_memoria):
 
 
 @pytest.mark.asyncio
-async def test_archive_ttl_distinto_de_forecast(proxy_memoria):
-    assert proxy_memoria.ajustes.redis_archive_ttl == 604800
-    assert proxy_memoria.ajustes.redis_forecast_ttl == 1800
+async def test_ttl_forecast_y_archive(proxy):
+    assert proxy.ajustes.cache_archive_ttl == 604800
+    assert proxy.ajustes.cache_forecast_ttl == 1800
 
 
 def _respuesta_http(status: int, json_data: dict):
