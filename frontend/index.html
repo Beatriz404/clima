@@ -260,24 +260,12 @@
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: "San Salvador" };
       let ultimaActualizacionDb = null;
 
-      function mostrarIndicadorDatosReales(data) {
+      function mostrarIndicadorDatosReales() {
         const meta = document.querySelector(".header .marn-meta");
-        if (!meta || !data) return;
-        const cuando = data.ultima_actualizacion
-          ? new Date(data.ultima_actualizacion).toLocaleString("es-SV")
-          : "recién consultado";
-        const origen =
-          data.origen === "open_meteo_tiempo_real"
-            ? "consulta directa a Open-Meteo"
-            : "base de datos (batch cada 15 min)";
+        if (!meta) return;
         meta.innerHTML =
-          "Datos <strong>reales</strong> de <strong>Open-Meteo</strong> · " +
-          data.ubicacion +
-          " · " +
-          origen +
-          " · Actualizado: " +
-          cuando +
-          " | <strong>MARN</strong> (SNET + estación SRT según ubicación del mapa)";
+          "Datos reales de <strong>Open-Meteo</strong> | " +
+          "<strong>MARN</strong> (SNET + estación SRT según ubicación del mapa)";
       }
 
       function mensajeErrorAmigable(mensaje) {
@@ -354,7 +342,7 @@
         selectedLocation.lat = data.latitud;
         selectedLocation.lon = data.longitud;
         ultimaActualizacionDb = data.ultima_actualizacion;
-        mostrarIndicadorDatosReales(data);
+        mostrarIndicadorDatosReales();
         return data.datos.map(function (dia) {
           return mapApiDay({
             fecha: dia.fecha,
