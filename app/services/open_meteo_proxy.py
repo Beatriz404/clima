@@ -32,14 +32,14 @@ class ProxyServicioNoDisponibleError(Exception):
     """Fallo al obtener datos del proxy."""
 
 
-def redondear_coordenadas(latitud: float, longitud: float, altitud: float) -> tuple[float, float, int]:
-    """Lat/lon a 3 decimales (~110 m); altitud a la decena más cercana."""
-    return round(latitud, 3), round(longitud, 3), int(round(altitud, -1))
+def _precision_cache(latitud: float, longitud: float, altitud: float) -> tuple[str, str, str]:
+    """Clave de caché con precisión alta (~1 m); la API usa coordenadas exactas."""
+    return f"{latitud:.6f}", f"{longitud:.6f}", f"{altitud:.1f}"
 
 
 def clave_cache_forecast(latitud: float, longitud: float, altitud: float) -> str:
-    lat, lon, alt = redondear_coordenadas(latitud, longitud, altitud)
-    return f"clima:forecast:{lat:.3f}:{lon:.3f}:{alt}"
+    lat, lon, alt = _precision_cache(latitud, longitud, altitud)
+    return f"clima:forecast:{lat}:{lon}:{alt}"
 
 
 def clave_cache_archive(
@@ -49,8 +49,8 @@ def clave_cache_archive(
     fecha_inicio: str,
     fecha_fin: str,
 ) -> str:
-    lat, lon, alt = redondear_coordenadas(latitud, longitud, altitud)
-    return f"clima:archive:{lat:.3f}:{lon:.3f}:{alt}:{fecha_inicio}:{fecha_fin}"
+    lat, lon, alt = _precision_cache(latitud, longitud, altitud)
+    return f"clima:archive:{lat}:{lon}:{alt}:{fecha_inicio}:{fecha_fin}"
 
 
 class OpenMeteoProxy:
@@ -192,13 +192,12 @@ class OpenMeteoProxy:
         variables_diarias: str,
     ) -> dict:
         clave = clave_cache_forecast(latitud, longitud, altitud)
-        lat, lon, _alt = redondear_coordenadas(latitud, longitud, altitud)
 
         async def _fetch() -> dict:
             url = f"{self.ajustes.api_open_meteo_base}/forecast"
             parametros = {
-                "latitude": lat,
-                "longitude": lon,
+                "latitude": latitud,
+                "longitude": longitud,
                 "elevation": altitud,
                 "timezone": self.ajustes.zona_horaria,
                 "daily": variables_diarias,
@@ -219,13 +218,12 @@ class OpenMeteoProxy:
         variables_diarias: str,
     ) -> dict:
         clave = clave_cache_archive(latitud, longitud, altitud, fecha_inicio, fecha_fin)
-        lat, lon, _alt = redondear_coordenadas(latitud, longitud, altitud)
 
         async def _fetch() -> dict:
             url = f"{self.ajustes.api_open_meteo_archivo_base}/archive"
             parametros = {
-                "latitude": lat,
-                "longitude": lon,
+                "latitude": latitud,
+                "longitude": longitud,
                 "elevation": altitud,
                 "timezone": self.ajustes.zona_horaria,
                 "start_date": fecha_inicio,

@@ -42,6 +42,23 @@ def buscar_por_nombre(nombre: str) -> UbicacionSalvador | None:
     return NOMBRES_UBICACIONES.get(_normalizar_nombre(nombre))
 
 
+def ubicacion_desde_coordenadas(
+    latitud: float,
+    longitud: float,
+    altitud: float,
+) -> UbicacionSalvador:
+    """Punto exacto del mapa (sin ajustar a las 14 ciudades del batch)."""
+    ref = ubicacion_mas_cercana(latitud, longitud)
+    etiqueta = f"Parcela ({latitud:.5f}, {longitud:.5f})"
+    return UbicacionSalvador(
+        nombre=etiqueta,
+        latitud=latitud,
+        longitud=longitud,
+        altitud=altitud,
+        region=f"Ref. {ref.region}",
+    )
+
+
 def ubicacion_mas_cercana(latitud: float, longitud: float) -> UbicacionSalvador:
     import math
 

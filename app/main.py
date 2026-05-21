@@ -16,6 +16,7 @@ from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import (
     UBICACIONES_SALVADOR,
     buscar_por_nombre,
+    ubicacion_desde_coordenadas,
     ubicacion_mas_cercana,
 )
 from app.esquemas import (
@@ -137,7 +138,12 @@ def _manejar_error_open_meteo(exc: Exception, contexto: str) -> HTTPException:
     return HTTPException(status_code=503, detail=f"{contexto}: {exc}")
 
 
-def _resolver_ubicacion(ubicacion: str | None, latitud: float | None, longitud: float | None):
+def _resolver_ubicacion(
+    ubicacion: str | None,
+    latitud: float | None,
+    longitud: float | None,
+    altitud: float | None = None,
+):
     if ubicacion:
         encontrada = buscar_por_nombre(ubicacion)
         if not encontrada:
@@ -147,9 +153,10 @@ def _resolver_ubicacion(ubicacion: str | None, latitud: float | None, longitud: 
             )
         return encontrada
     if latitud is not None and longitud is not None:
-        if not ajustes.validate_coordinates(latitud, longitud, 650.0):
+        alt = 650.0 if altitud is None else altitud
+        if not ajustes.validate_coordinates(latitud, longitud, alt):
             raise HTTPException(status_code=422, detail="Coordenadas fuera del territorio de El Salvador")
-        return ubicacion_mas_cercana(latitud, longitud)
+        return ubicacion_desde_coordenadas(latitud, longitud, alt)
     raise HTTPException(
         status_code=400,
         detail="Indique ubicacion=... o latitud=... y longitud=...",
@@ -192,10 +199,11 @@ async def api_pronostico(
     ubicacion: str | None = Query(None, description="Nombre de la ciudad (ej. San Salvador)"),
     latitud: float | None = Query(None, ge=13.0, le=14.5),
     longitud: float | None = Query(None, ge=-90.3, le=-87.5),
+    altitud: float | None = Query(None, ge=0, le=3500, description="Metros; obligatorio para parcela exacta en el mapa"),
     dias: int = Query(7, ge=1, le=15),
     sesion: Session = Depends(obtener_sesion),
 ):
-    destino = _resolver_ubicacion(ubicacion, latitud, longitud)
+    destino = _resolver_ubicacion(ubicacion, latitud, longitud, altitud)
     try:
         return await obtener_pronostico_garantizado(sesion, destino, dias)
     except LimiteOpenMeteoError as exc:

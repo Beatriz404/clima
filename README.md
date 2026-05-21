@@ -82,7 +82,8 @@ En **Render** no hace falta Redis: elimine `REDIS_URL` si la tenía definida. La
 - Datos **siempre reales** desde `api.open-meteo.com`
 - Caché forecast: 30 min; archive: 7 días
 - Peticiones concurrentes iguales → una sola llamada HTTP
-- Coordenadas agrupadas: lat/lon 3 decimales, altitud a la decena
+- Mapa: pronóstico con **coordenadas exactas** del punto seleccionado (Open-Meteo)
+- Caché en memoria con precisión alta (~1 m) solo para evitar duplicar la misma petición
 - Backoff ante 429: 1 s, 3 s, 7 s; máx. 2 peticiones simultáneas a Open-Meteo
 
 ## Entrenar modelo

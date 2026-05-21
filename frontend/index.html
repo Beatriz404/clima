@@ -327,9 +327,10 @@
         const qs = new URLSearchParams({
           latitud: String(lat),
           longitud: String(lon),
+          altitud: String(alt),
           dias: String(Math.min(dias, 15)),
         });
-        if (selectedLocation.nombre) {
+        if (selectedLocation.nombre && selectedLocation.nombre.indexOf("Parcela (") !== 0) {
           qs.set("ubicacion", selectedLocation.nombre);
         }
         const response = await fetch("/api/pronostico?" + qs.toString());
@@ -338,9 +339,13 @@
           throw new Error("HTTP " + response.status + ": " + detalle);
         }
         const data = await response.json();
-        selectedLocation.nombre = data.ubicacion;
         selectedLocation.lat = data.latitud;
         selectedLocation.lon = data.longitud;
+        if (data.ubicacion && data.ubicacion.indexOf("Parcela (") === 0) {
+          selectedLocation.nombre = null;
+        } else {
+          selectedLocation.nombre = data.ubicacion;
+        }
         ultimaActualizacionDb = data.ultima_actualizacion;
         mostrarIndicadorDatosReales();
         return data.datos.map(function (dia) {
@@ -697,12 +702,13 @@
             15
           );
           let textoUbicacion =
-            (selectedLocation.nombre || "Ubicación") +
-            " (" +
-            selectedLocation.lat.toFixed(4) +
+            "Parcela exacta (" +
+            selectedLocation.lat.toFixed(5) +
             ", " +
-            selectedLocation.lon.toFixed(4) +
-            ")";
+            selectedLocation.lon.toFixed(5) +
+            ", " +
+            Math.round(selectedLocation.alt) +
+            " m)";
           if (ultimaActualizacionDb) {
             textoUbicacion += " · Actualizado: " + new Date(ultimaActualizacionDb).toLocaleString("es-SV");
           }

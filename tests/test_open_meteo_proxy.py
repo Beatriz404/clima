@@ -10,25 +10,17 @@ from app.services.open_meteo_proxy import (
     OpenMeteoProxy,
     clave_cache_archive,
     clave_cache_forecast,
-    redondear_coordenadas,
 )
 
 
-def test_redondear_coordenadas_tres_decimales_y_altitud_decena():
-    lat, lon, alt = redondear_coordenadas(13.69294, -89.21819, 653)
-    assert lat == 13.693
-    assert lon == -89.218
-    assert alt == 650
-
-
-def test_clave_forecast_formato():
-    clave = clave_cache_forecast(13.6929, -89.2182, 653)
-    assert clave == "clima:forecast:13.693:-89.218:650"
+def test_clave_forecast_formato_alta_precision():
+    clave = clave_cache_forecast(13.6929, -89.2182, 653.2)
+    assert clave == "clima:forecast:13.692900:-89.218200:653.2"
 
 
 def test_clave_archive_incluye_fechas():
     clave = clave_cache_archive(13.6929, -89.2182, 650, "2024-01-01", "2024-01-31")
-    assert clave == "clima:archive:13.693:-89.218:650:2024-01-01:2024-01-31"
+    assert clave == "clima:archive:13.692900:-89.218200:650.0:2024-01-01:2024-01-31"
 
 
 @pytest.fixture
@@ -58,11 +50,14 @@ async def test_cache_hit_evita_segunda_llamada_http(proxy):
             13.6929, -89.2182, 650, variables_diarias="temperature_2m_max"
         )
         r2 = await proxy.consultar_forecast(
-            13.69296, -89.21821, 653, variables_diarias="temperature_2m_max"
+            13.6929, -89.2182, 650, variables_diarias="temperature_2m_max"
         )
 
     assert r1 == r2
     assert mock_get.await_count == 1
+    args = mock_get.await_args
+    assert args.kwargs["params"]["latitude"] == 13.6929
+    assert args.kwargs["params"]["longitude"] == -89.2182
 
 
 @pytest.mark.asyncio
@@ -87,13 +82,38 @@ async def test_solicitudes_concurrentes_comparten_un_fetch(proxy):
 
     with patch.object(proxy._cliente_http, "get", side_effect=get_lento):
         resultados = await asyncio.gather(
-            proxy.consultar_forecast(13.7, -89.2, 650, variables_diarias="temperature_2m_max"),
-            proxy.consultar_forecast(13.7001, -89.2001, 652, variables_diarias="temperature_2m_max"),
-            proxy.consultar_forecast(13.6999, -89.1999, 648, variables_diarias="temperature_2m_max"),
+            proxy.consultar_forecast(13.70512, -89.20187, 642, variables_diarias="temperature_2m_max"),
+            proxy.consultar_forecast(13.70512, -89.20187, 642, variables_diarias="temperature_2m_max"),
+            proxy.consultar_forecast(13.70512, -89.20187, 642, variables_diarias="temperature_2m_max"),
         )
 
     assert len(resultados) == 3
     assert llamadas == 1
+
+
+@pytest.mark.asyncio
+async def test_coordenadas_muy_cercanas_pueden_ser_consultas_distintas(proxy):
+    respuesta = {
+        "daily": {
+            "time": ["2024-06-01"],
+            "temperature_2m_max": [30.0],
+            "temperature_2m_min": [20.0],
+            "precipitation_sum": [1.0],
+            "relative_humidity_2m_mean": [60.0],
+            "windspeed_10m_max": [10.0],
+        }
+    }
+    mock_get = AsyncMock(return_value=_respuesta_http(200, respuesta))
+
+    with patch.object(proxy._cliente_http, "get", mock_get):
+        await proxy.consultar_forecast(
+            13.69290, -89.21820, 650, variables_diarias="temperature_2m_max"
+        )
+        await proxy.consultar_forecast(
+            13.69296, -89.21821, 653, variables_diarias="temperature_2m_max"
+        )
+
+    assert mock_get.await_count == 2
 
 
 @pytest.mark.asyncio
