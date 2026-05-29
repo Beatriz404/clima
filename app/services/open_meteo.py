@@ -1,4 +1,3 @@
-"""Capa de dominio: formatea respuestas reales de Open-Meteo vía proxy en memoria."""
 
 from collections.abc import Callable
 from datetime import datetime

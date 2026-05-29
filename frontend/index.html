@@ -166,6 +166,16 @@
         .summary-grid { grid-template-columns: 1fr; }
         .chart-area { height: 290px; }
       }
+      .data-notice {
+        margin: 0.75rem 0 0;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
+        background: #fff8e6;
+        border: 1px solid #f0b429;
+        color: #5c4a12;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
     </style>
   </head>
   <body>
@@ -251,6 +261,7 @@
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
       const BASE_ALT = 650;
+      const MAP_REFRESH_DEBOUNCE_MS = 1500;
 
       let forecastData = [];
       let visibleDays = 7;
@@ -266,6 +277,30 @@
         meta.innerHTML =
           "Datos reales de <strong>Open-Meteo</strong> | " +
           "<strong>MARN</strong> (SNET + estación SRT según ubicación del mapa)";
+      }
+
+      function mostrarAvisoDatos(advertencia, confiable, referencia) {
+        let el = document.getElementById("dataNotice");
+        if (!el) {
+          const header = document.querySelector(".header");
+          el = document.createElement("p");
+          el.id = "dataNotice";
+          el.className = "data-notice";
+          header.appendChild(el);
+        }
+        if (!advertencia && confiable !== false) {
+          el.style.display = "none";
+          return;
+        }
+        let texto = advertencia || "Datos en revisión.";
+        if (referencia) {
+          texto += " Referencia: " + referencia + ".";
+        }
+        if (confiable === false) {
+          texto += " Revise antes de decidir siembra.";
+        }
+        el.style.display = "block";
+        el.textContent = texto;
       }
 
       function mensajeErrorAmigable(mensaje) {
@@ -348,6 +383,7 @@
         }
         ultimaActualizacionDb = data.ultima_actualizacion;
         mostrarIndicadorDatosReales();
+        mostrarAvisoDatos(data.advertencia, data.confiable, data.ubicacion_referencia);
         return data.datos.map(function (dia) {
           return mapApiDay({
             fecha: dia.fecha,
@@ -771,7 +807,7 @@
           selectedPointEl.textContent =
             "Punto seleccionado: " + newLat.toFixed(4) + ", " + newLon.toFixed(4);
           selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT, nombre: null };
-          programarActualizacion(700);
+          programarActualizacion(MAP_REFRESH_DEBOUNCE_MS);
         }
 
         map.on("click", function (event) {

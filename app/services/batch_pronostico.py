@@ -5,15 +5,16 @@ from datetime import datetime
 from app.base_datos import SesionLocal
 from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import UBICACIONES_SALVADOR
-from app.services.open_meteo import obtener_pronostico_siembra
+from app.services.batch_estado import registrar_ejecucion_batch
+from app.services.open_meteo import LimiteOpenMeteoError, obtener_pronostico_siembra
 from app.services.pronostico_repositorio import guardar_pronosticos_ubicacion
 
 logger = logging.getLogger(__name__)
-ajustes = obtener_ajustes()
 
 REINTENTOS = 3
-ESPERA_REINTENTO_SEG = 2
-PAUSA_ENTRE_UBICACIONES_SEG = 1.5
+ESPERA_REINTENTO_SEG = 3
+PAUSA_ENTRE_UBICACIONES_SEG = 2.5
+PAUSA_TRAS_429_SEG = 12
 DIAS_PRONOSTICO = 15
 
 
@@ -26,6 +27,8 @@ async def _actualizar_ubicacion(ubicacion) -> bool:
                 ubicacion.altitud,
                 DIAS_PRONOSTICO,
             )
+            if not registros:
+                raise ValueError("Open-Meteo devolvió lista vacía")
             sesion = SesionLocal()
             try:
                 total = guardar_pronosticos_ubicacion(sesion, ubicacion, registros)
@@ -38,6 +41,18 @@ async def _actualizar_ubicacion(ubicacion) -> bool:
                 total,
             )
             return True
+        except LimiteOpenMeteoError as exc:
+            logger.warning(
+                "[%s] %s límite Open-Meteo (intento %d/%d)",
+                datetime.utcnow().isoformat(),
+                ubicacion.nombre,
+                intento,
+                REINTENTOS,
+            )
+            if intento < REINTENTOS:
+                await asyncio.sleep(PAUSA_TRAS_429_SEG)
+            elif intento == REINTENTOS:
+                logger.error("[%s] %s: %s", datetime.utcnow().isoformat(), ubicacion.nombre, exc)
         except Exception as exc:
             logger.warning(
                 "[%s] %s intento %d/%d falló: %s",
@@ -82,4 +97,5 @@ async def ejecutar_actualizacion_batch() -> dict:
         "total_ubicaciones": len(UBICACIONES_SALVADOR),
     }
     logger.info("[%s] Batch finalizado: %s", fin.isoformat(), resumen)
+    registrar_ejecucion_batch(resumen)
     return resumen

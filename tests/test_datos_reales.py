@@ -54,7 +54,7 @@ def test_frontend_sin_datos_falsos():
         assert texto not in html, f"El frontend aún contiene datos falsos o legacy: {texto}"
     assert "obtenerPronosticoReal" in html
     assert "obtenerMarnReal" in html
-    assert 'fetch("/forecast"' in html
+    assert 'fetch("/api/pronostico' in html
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 """Pruebas del sistema de pre-cálculo y API de pronósticos."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -33,6 +33,16 @@ def test_ubicacion_mas_cercana_san_salvador():
     assert cerca.nombre == "San Salvador"
 
 
+def test_api_sistema_estado(cliente):
+    respuesta = cliente.get("/api/sistema/estado")
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["ubicaciones_batch"] == 14
+    assert "pronostico_solo_batch" in datos
+    assert "proxy_cache" in datos
+    assert datos["nota"]
+
+
 def test_api_ubicaciones(cliente):
     respuesta = cliente.get("/api/ubicaciones")
     assert respuesta.status_code == 200
@@ -47,13 +57,14 @@ def test_api_pronostico_desde_db(cliente):
     ubicacion = buscar_por_nombre("San Salvador")
     registros = [
         {
-            "fecha": date.today(),
+            "fecha": date.today() + timedelta(days=i),
             "temp_max": 32.0,
             "temp_min": 22.0,
             "lluvia_mm": 1.5,
             "humedad": 65,
             "velocidad_viento": 10.2,
         }
+        for i in range(7)
     ]
     sesion = SesionLocal()
     try:
@@ -69,6 +80,45 @@ def test_api_pronostico_desde_db(cliente):
     assert datos["datos_reales"] is True
     assert len(datos["datos"]) >= 1
     assert datos["datos"][0]["temp_max"] == 32.0
+
+
+def test_api_pronostico_parcela_usa_ciudad_referencia(cliente, monkeypatch):
+    from app.base_datos import SesionLocal
+    from app.configuracion import obtener_ajustes
+
+    obtener_ajustes.cache_clear()
+    monkeypatch.setenv("PRONOSTICO_SOLO_BATCH", "true")
+    monkeypatch.setenv("ENTORNO", "testing")
+    obtener_ajustes.cache_clear()
+
+    ciudad = buscar_por_nombre("San Salvador")
+    registros = [
+        {
+            "fecha": date.today(),
+            "temp_max": 31.0,
+            "temp_min": 21.0,
+            "lluvia_mm": 2.0,
+            "humedad": 70,
+            "velocidad_viento": 8.0,
+        }
+    ]
+    sesion = SesionLocal()
+    try:
+        guardar_pronosticos_ubicacion(sesion, ciudad, registros)
+    finally:
+        sesion.close()
+
+    respuesta = cliente.get(
+        "/api/pronostico",
+        params={"latitud": 13.705, "longitud": -89.202, "altitud": 640, "dias": 1},
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    datos = respuesta.json()
+    assert datos["origen"] == "ciudad_referencia_batch"
+    assert datos["ubicacion_referencia"] == "San Salvador"
+    assert datos["confiable"] is True
+    assert datos["advertencia"]
+    obtener_ajustes.cache_clear()
 
 
 @pytest.fixture

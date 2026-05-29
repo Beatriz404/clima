@@ -33,8 +33,9 @@ class ProxyServicioNoDisponibleError(Exception):
 
 
 def _precision_cache(latitud: float, longitud: float, altitud: float) -> tuple[str, str, str]:
-    """Clave de caché con precisión alta (~1 m); la API usa coordenadas exactas."""
-    return f"{latitud:.6f}", f"{longitud:.6f}", f"{altitud:.1f}"
+    """Clave de caché alineada con la cuadrícula del mapa (menos peticiones duplicadas)."""
+    dec = obtener_ajustes().coordenadas_cache_decimales
+    return f"{latitud:.{dec}f}", f"{longitud:.{dec}f}", f"{altitud:.0f}"
 
 
 def clave_cache_forecast(latitud: float, longitud: float, altitud: float) -> str:
@@ -92,7 +93,10 @@ class OpenMeteoProxy:
         self._cache.clear()
 
         if self._cliente_http is not None:
-            await self._cliente_http.aclose()
+            try:
+                await self._cliente_http.aclose()
+            except RuntimeError:
+                logger.debug("Cierre HTTP omitido (event loop ya cerrado)")
             self._cliente_http = None
 
     def limpiar_cache(self) -> None:

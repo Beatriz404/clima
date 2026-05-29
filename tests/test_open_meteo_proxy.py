@@ -13,14 +13,14 @@ from app.services.open_meteo_proxy import (
 )
 
 
-def test_clave_forecast_formato_alta_precision():
+def test_clave_forecast_formato_cuadricula():
     clave = clave_cache_forecast(13.6929, -89.2182, 653.2)
-    assert clave == "clima:forecast:13.692900:-89.218200:653.2"
+    assert clave == "clima:forecast:13.69:-89.22:653"
 
 
 def test_clave_archive_incluye_fechas():
     clave = clave_cache_archive(13.6929, -89.2182, 650, "2024-01-01", "2024-01-31")
-    assert clave == "clima:archive:13.692900:-89.218200:650.0:2024-01-01:2024-01-31"
+    assert clave == "clima:archive:13.69:-89.22:650:2024-01-01:2024-01-31"
 
 
 @pytest.fixture

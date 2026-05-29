@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from app.base_datos import Base, engine, obtener_sesion
 from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import (
-    UBICACIONES_SALVADOR,
     buscar_por_nombre,
     ubicacion_desde_coordenadas,
     ubicacion_mas_cercana,
@@ -34,7 +33,12 @@ from app.esquemas import (
 )
 from app.modelos import PronosticoSiembra, RecomendacionSiembra, RegistroClimatico
 from app.services.batch_pronostico import ejecutar_actualizacion_batch
-from app.services.pronostico_servicio import obtener_pronostico_garantizado
+from app.data.ubicaciones_salvador import UBICACIONES_SALVADOR
+from app.services.batch_estado import obtener_ultima_ejecucion_batch
+from app.services.pronostico_servicio import (
+    obtener_pronostico_garantizado,
+    obtener_pronostico_para_api,
+)
 from app.services.agricultura import evaluar_dia_siembra
 from app.services.ajuste_ml import modelo_ajuste_global
 from app.services.analitica_agricola import (
@@ -49,7 +53,6 @@ from app.services.open_meteo import (
     LimiteOpenMeteoError,
     ProxyServicioNoDisponibleError,
     obtener_historico,
-    obtener_pronostico,
 )
 from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy, obtener_proxy
 
@@ -89,7 +92,7 @@ app = FastAPI(
     openapi_tags=[
         {
             "name": "Pronóstico pre-calculado",
-            "description": "Lectura desde base de datos (batch cada 15 min).",
+            "description": "Lectura desde base de datos (batch programado; sin Open-Meteo en vivo en producción).",
         },
         {
             "name": "Nacional MARN (API pública documentada)",
@@ -173,10 +176,40 @@ async def health():
             "estado": "ok",
             "fuente_datos": "Open-Meteo (api.open-meteo.com)",
             "cache": "memoria",
+            "pronostico_solo_batch": ajustes.pronostico_solo_batch,
+            "batch_habilitado": ajustes.batch_habilitado,
             **stats,
         }
     except RuntimeError:
         return {"estado": "iniciando"}
+
+
+@app.get("/api/sistema/estado", tags=["Pronóstico pre-calculado"])
+async def api_sistema_estado():
+    """Monitoreo: proxy, batch y modo de lectura (sin consultar Open-Meteo)."""
+    cfg = obtener_ajustes()
+    proxy_stats: dict = {}
+    try:
+        proxy_stats = obtener_proxy().estadisticas_cache()
+    except RuntimeError:
+        proxy_stats = {"error": "proxy_no_iniciado"}
+
+    return {
+        "entorno": cfg.entorno,
+        "pronostico_solo_batch": cfg.pronostico_solo_batch,
+        "batch_habilitado": cfg.batch_habilitado,
+        "batch_intervalo_minutos": cfg.batch_intervalo_minutos,
+        "pronostico_max_edad_minutos": cfg.pronostico_max_edad_minutos,
+        "ubicaciones_batch": len(UBICACIONES_SALVADOR),
+        "open_meteo_max_concurrent": cfg.open_meteo_max_concurrent,
+        "cache_forecast_ttl_segundos": cfg.cache_forecast_ttl,
+        "proxy_cache": proxy_stats,
+        "ultima_ejecucion_batch": obtener_ultima_ejecucion_batch(),
+        "nota": (
+            "Con pronostico_solo_batch=true solo el batch consulta Open-Meteo; "
+            "las APIs de usuario leen SQLite."
+        ),
+    }
 
 
 @app.get("/api/ubicaciones", response_model=RespuestaUbicaciones, tags=["Pronóstico pre-calculado"])
@@ -227,11 +260,13 @@ async def inicio():
 
 
 @app.post("/forecast", response_model=RespuestaPronostico)
-async def forecast(entrada: SolicitudClima):
+async def forecast(entrada: SolicitudClima, sesion: Session = Depends(obtener_sesion)):
     _validar_coordenadas(entrada.latitud, entrada.longitud, entrada.altitud)
     try:
         dias_consulta = _dias_open_meteo(entrada.dias)
-        dias = await obtener_pronostico(entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta)
+        dias = await obtener_pronostico_para_api(
+            sesion, entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta
+        )
         return {
             "ubicacion": {
                 "latitud": entrada.latitud,
@@ -251,7 +286,9 @@ async def adjusted(entrada: SolicitudClima, sesion: Session = Depends(obtener_se
     _validar_coordenadas(entrada.latitud, entrada.longitud, entrada.altitud)
     try:
         dias_consulta = _dias_open_meteo(entrada.dias)
-        pronostico = await obtener_pronostico(entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta)
+        pronostico = await obtener_pronostico_para_api(
+            sesion, entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta
+        )
         salida = []
         for dia in pronostico:
             temperatura_media = (dia["temperatura_max"] + dia["temperatura_min"]) / 2
@@ -314,7 +351,9 @@ async def planting(entrada: SolicitudClima, sesion: Session = Depends(obtener_se
     _validar_coordenadas(entrada.latitud, entrada.longitud, entrada.altitud)
     try:
         dias_consulta = _dias_open_meteo(entrada.dias)
-        pronostico = await obtener_pronostico(entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta)
+        pronostico = await obtener_pronostico_para_api(
+            sesion, entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta
+        )
         recomendaciones: list[RecomendacionDia] = []
         for dia in pronostico:
             temperatura_media = (dia["temperatura_max"] + dia["temperatura_min"]) / 2
@@ -373,11 +412,13 @@ async def planting(entrada: SolicitudClima, sesion: Session = Depends(obtener_se
 
 
 @app.post("/insights", response_model=RespuestaInsights)
-async def insights(entrada: SolicitudClima):
+async def insights(entrada: SolicitudClima, sesion: Session = Depends(obtener_sesion)):
     _validar_coordenadas(entrada.latitud, entrada.longitud, entrada.altitud)
     try:
         dias_consulta = _dias_open_meteo(entrada.dias)
-        pronostico = await obtener_pronostico(entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta)
+        pronostico = await obtener_pronostico_para_api(
+            sesion, entrada.latitud, entrada.longitud, entrada.altitud, dias_consulta
+        )
         region = region_microclima(entrada.latitud, entrada.longitud, entrada.altitud)
         riesgo_sequia_data = riesgo_sequia(pronostico, region)
         riesgo_exceso_data = riesgo_exceso_lluvia(pronostico, region)

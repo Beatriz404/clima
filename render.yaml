@@ -1,0 +1,40 @@
+# Render Blueprint: https://clima-glw1.onrender.com/
+services:
+  - type: web
+    name: clima-agricola
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: clima-sqlite
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENTORNO
+        value: produccion
+      - key: BASE_DATOS_URL
+        value: sqlite:////var/data/clima_agricola.db
+      - key: BATCH_HABILITADO
+        value: "true"
+      - key: BATCH_AL_INICIAR
+        value: "true"
+      - key: BATCH_INTERVALO_MINUTOS
+        value: "30"
+      - key: PRONOSTICO_MAX_EDAD_MINUTOS
+        value: "45"
+      - key: PRONOSTICO_SOLO_BATCH
+        value: "true"
+      - key: CACHE_FORECAST_TTL
+        value: "1800"
+      - key: OPEN_METEO_MAX_CONCURRENT
+        value: "1"
+      - key: COORDENADAS_REDONDEO_GRADOS
+        value: "0.02"
+      - key: COORDENADAS_CACHE_DECIMALES
+        value: "2"
+      - key: CORS_ORIGINS
+        value: https://clima-glw1.onrender.com

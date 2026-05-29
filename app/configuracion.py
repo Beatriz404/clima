@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import Field, HttpUrl, field_validator
+from pydantic import Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -51,13 +51,29 @@ class AjustesAplicacion(BaseSettings):
     httpx_max_connections: int = Field(default=10, ge=2, le=100)
     httpx_max_keepalive_connections: int = Field(default=5, ge=1, le=50)
     batch_habilitado: bool = Field(default=True, description="Scheduler de pre-cálculo cada N minutos")
-    batch_intervalo_minutos: int = Field(default=15, ge=5, le=120)
+    batch_intervalo_minutos: int = Field(default=30, ge=5, le=120)
     batch_al_iniciar: bool = Field(default=True, description="Ejecutar batch al arrancar la API")
     pronostico_max_edad_minutos: int = Field(
-        default=20,
+        default=45,
         ge=5,
-        le=120,
+        le=180,
         description="Si el cache supera esta edad, se refresca desde Open-Meteo al consultar",
+    )
+    pronostico_solo_batch: bool = Field(
+        default=False,
+        description="En true, las peticiones de usuario no llaman Open-Meteo (solo el batch)",
+    )
+    coordenadas_redondeo_grados: float = Field(
+        default=0.02,
+        ge=0,
+        le=0.1,
+        description="Cuadrícula del mapa en grados (~2.2 km con 0.02); 0 desactiva",
+    )
+    coordenadas_cache_decimales: int = Field(
+        default=2,
+        ge=2,
+        le=4,
+        description="Decimales para clave de caché Open-Meteo en memoria",
     )
     min_latitud: float = Field(default=13.0)
     max_latitud: float = Field(default=14.5)
@@ -149,6 +165,25 @@ class AjustesAplicacion(BaseSettings):
             and self.min_longitud <= longitud <= self.max_longitud
             and self.min_altitud <= altitud <= self.max_altitud
         )
+
+    @model_validator(mode="after")
+    def aplicar_valores_produccion(self) -> "AjustesAplicacion":
+        if self.entorno != "produccion":
+            return self
+        cambios: dict = {}
+        if not self.pronostico_solo_batch:
+            cambios["pronostico_solo_batch"] = True
+        if self.batch_intervalo_minutos < 30:
+            cambios["batch_intervalo_minutos"] = 30
+        if self.pronostico_max_edad_minutos < 45:
+            cambios["pronostico_max_edad_minutos"] = 45
+        if self.cache_forecast_ttl < 1800:
+            cambios["cache_forecast_ttl"] = 1800
+        if self.open_meteo_max_concurrent > 1:
+            cambios["open_meteo_max_concurrent"] = 1
+        if cambios:
+            return self.model_copy(update=cambios)
+        return self
 
 
 @lru_cache

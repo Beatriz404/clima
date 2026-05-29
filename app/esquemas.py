@@ -161,8 +161,20 @@ class RespuestaPronosticoApi(BaseModel):
     ultima_actualizacion: datetime | None
     fuente: str = "Open-Meteo"
     datos_reales: bool = True
+    confiable: bool = Field(
+        default=True,
+        description="True si los datos provienen del batch reciente o consulta directa válida",
+    )
     origen: str = Field(
         description="base_datos = cache del batch; open_meteo_tiempo_real = consulta directa reciente"
+    )
+    ubicacion_referencia: str | None = Field(
+        default=None,
+        description="Ciudad del batch usada como referencia para parcelas en el mapa",
+    )
+    advertencia: str | None = Field(
+        default=None,
+        description="Aviso al usuario sobre antigüedad o referencia espacial",
     )
     dias: int
     datos: list[DatoPronosticoSiembra]

@@ -1,6 +1,8 @@
 import unicodedata
 from dataclasses import dataclass
 
+from app.configuracion import obtener_ajustes
+
 
 def _normalizar_nombre(texto: str) -> str:
     sin_acentos = "".join(
@@ -42,19 +44,42 @@ def buscar_por_nombre(nombre: str) -> UbicacionSalvador | None:
     return NOMBRES_UBICACIONES.get(_normalizar_nombre(nombre))
 
 
+def redondear_coordenada(valor: float, paso: float) -> float:
+    if paso <= 0:
+        return valor
+    return round(valor / paso) * paso
+
+
+def aplicar_cuadricula_coordenadas(
+    latitud: float,
+    longitud: float,
+    altitud: float,
+    paso: float | None = None,
+) -> tuple[float, float, float]:
+    paso_grados = paso if paso is not None else obtener_ajustes().coordenadas_redondeo_grados
+    if paso_grados <= 0:
+        return latitud, longitud, altitud
+    return (
+        redondear_coordenada(latitud, paso_grados),
+        redondear_coordenada(longitud, paso_grados),
+        round(altitud, 0),
+    )
+
+
 def ubicacion_desde_coordenadas(
     latitud: float,
     longitud: float,
     altitud: float,
 ) -> UbicacionSalvador:
-    """Punto exacto del mapa (sin ajustar a las 14 ciudades del batch)."""
-    ref = ubicacion_mas_cercana(latitud, longitud)
-    etiqueta = f"Parcela ({latitud:.5f}, {longitud:.5f})"
+    """Punto del mapa en cuadrícula estable (reutiliza caché y BD)."""
+    lat, lon, alt = aplicar_cuadricula_coordenadas(latitud, longitud, altitud)
+    ref = ubicacion_mas_cercana(lat, lon)
+    etiqueta = f"Parcela ({lat:.4f}, {lon:.4f})"
     return UbicacionSalvador(
         nombre=etiqueta,
-        latitud=latitud,
-        longitud=longitud,
-        altitud=altitud,
+        latitud=lat,
+        longitud=lon,
+        altitud=alt,
         region=f"Ref. {ref.region}",
     )
 
