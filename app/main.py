@@ -34,7 +34,6 @@ from app.esquemas import (
 from app.modelos import PronosticoSiembra, RecomendacionSiembra, RegistroClimatico
 from app.services.batch_pronostico import ejecutar_actualizacion_batch
 from app.data.ubicaciones_salvador import UBICACIONES_SALVADOR
-from app.services.batch_estado import obtener_ultima_ejecucion_batch
 from app.services.pronostico_servicio import (
     obtener_pronostico_garantizado,
     obtener_pronostico_para_api,
@@ -54,6 +53,7 @@ from app.services.open_meteo import (
     ProxyServicioNoDisponibleError,
     obtener_historico,
 )
+from app.routes.pronostico import router as pronostico_router
 from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy, obtener_proxy
 
 ajustes = obtener_ajustes()
@@ -112,6 +112,8 @@ app.add_middleware(
 frontend_path = Path("frontend")
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
+
+app.include_router(pronostico_router)
 
 
 def _dias_open_meteo(dias_solicitados: int) -> int:
@@ -182,34 +184,6 @@ async def health():
         }
     except RuntimeError:
         return {"estado": "iniciando"}
-
-
-@app.get("/api/sistema/estado", tags=["Pronóstico pre-calculado"])
-async def api_sistema_estado():
-    """Monitoreo: proxy, batch y modo de lectura (sin consultar Open-Meteo)."""
-    cfg = obtener_ajustes()
-    proxy_stats: dict = {}
-    try:
-        proxy_stats = obtener_proxy().estadisticas_cache()
-    except RuntimeError:
-        proxy_stats = {"error": "proxy_no_iniciado"}
-
-    return {
-        "entorno": cfg.entorno,
-        "pronostico_solo_batch": cfg.pronostico_solo_batch,
-        "batch_habilitado": cfg.batch_habilitado,
-        "batch_intervalo_minutos": cfg.batch_intervalo_minutos,
-        "pronostico_max_edad_minutos": cfg.pronostico_max_edad_minutos,
-        "ubicaciones_batch": len(UBICACIONES_SALVADOR),
-        "open_meteo_max_concurrent": cfg.open_meteo_max_concurrent,
-        "cache_forecast_ttl_segundos": cfg.cache_forecast_ttl,
-        "proxy_cache": proxy_stats,
-        "ultima_ejecucion_batch": obtener_ultima_ejecucion_batch(),
-        "nota": (
-            "Con pronostico_solo_batch=true solo el batch consulta Open-Meteo; "
-            "las APIs de usuario leen SQLite."
-        ),
-    }
 
 
 @app.get("/api/ubicaciones", response_model=RespuestaUbicaciones, tags=["Pronóstico pre-calculado"])

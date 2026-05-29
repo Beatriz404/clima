@@ -176,6 +176,25 @@
         font-size: 0.9rem;
         line-height: 1.4;
       }
+      .map-toast {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        z-index: 9999;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        max-width: 320px;
+        display: none;
+      }
+      .map-toast.warning {
+        display: block;
+        background: #fff8e6;
+        border: 1px solid #f0b429;
+        color: #5c4a12;
+      }
     </style>
   </head>
   <body>
@@ -254,6 +273,7 @@
         <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
       </section>
     </main>
+    <div id="mapToast" class="map-toast" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -261,13 +281,16 @@
       const BASE_LAT = 13.6929;
       const BASE_LON = -89.2182;
       const BASE_ALT = 650;
-      const MAP_REFRESH_DEBOUNCE_MS = 1500;
+      const MAP_CLICK_DEBOUNCE_MS = 500;
+      const MAP_MIN_INTERVALO_MS = 3000;
 
       let forecastData = [];
       let visibleDays = 7;
       let forecastChart;
       let isLoading = false;
       let refreshTimer = null;
+      let ultimaPeticionMapa = 0;
+      let toastTimer = null;
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: "San Salvador" };
       let ultimaActualizacionDb = null;
 
@@ -279,7 +302,23 @@
           "<strong>MARN</strong> (SNET + estación SRT según ubicación del mapa)";
       }
 
-      function mostrarAvisoDatos(advertencia, confiable, referencia) {
+      function mostrarToast(mensaje, tipo) {
+        const el = document.getElementById("mapToast");
+        if (!el) return;
+        el.textContent = mensaje;
+        el.className = "map-toast " + (tipo || "warning");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          el.className = "map-toast";
+          el.textContent = "";
+        }, 4000);
+      }
+
+      function esParcelaEnMapa() {
+        return !selectedLocation.nombre || selectedLocation.nombre.indexOf("Parcela (") === 0;
+      }
+
+      function mostrarAvisoDatos(advertencia, confiable, referencia, distanciaKm) {
         let el = document.getElementById("dataNotice");
         if (!el) {
           const header = document.querySelector(".header");
@@ -294,7 +333,11 @@
         }
         let texto = advertencia || "Datos en revisión.";
         if (referencia) {
-          texto += " Referencia: " + referencia + ".";
+          texto += " Referencia: " + referencia;
+          if (distanciaKm != null) {
+            texto += " (a " + Number(distanciaKm).toFixed(1) + " km)";
+          }
+          texto += ".";
         }
         if (confiable === false) {
           texto += " Revise antes de decidir siembra.";
@@ -359,32 +402,51 @@
       }
 
       async function obtenerPronosticoReal(lat, lon, alt, dias = 15) {
-        const qs = new URLSearchParams({
-          latitud: String(lat),
-          longitud: String(lon),
-          altitud: String(alt),
-          dias: String(Math.min(dias, 15)),
-        });
-        if (selectedLocation.nombre && selectedLocation.nombre.indexOf("Parcela (") !== 0) {
+        const diasParam = String(Math.min(dias, 15));
+        let url;
+        if (esParcelaEnMapa()) {
+          url =
+            "/api/pronostico/parcela?lat=" +
+            encodeURIComponent(lat) +
+            "&lng=" +
+            encodeURIComponent(lon) +
+            "&altitud=" +
+            encodeURIComponent(alt) +
+            "&dias=" +
+            diasParam;
+        } else {
+          const qs = new URLSearchParams({
+            latitud: String(lat),
+            longitud: String(lon),
+            altitud: String(alt),
+            dias: diasParam,
+          });
           qs.set("ubicacion", selectedLocation.nombre);
+          url = "/api/pronostico?" + qs.toString();
         }
-        const response = await fetch("/api/pronostico?" + qs.toString());
+        const response = await fetch(url);
         if (!response.ok) {
           const detalle = await response.text();
           throw new Error("HTTP " + response.status + ": " + detalle);
         }
         const data = await response.json();
+        const filas = data.pronostico || data.datos;
         selectedLocation.lat = data.latitud;
         selectedLocation.lon = data.longitud;
         if (data.ubicacion && data.ubicacion.indexOf("Parcela (") === 0) {
           selectedLocation.nombre = null;
-        } else {
+        } else if (data.ubicacion && !esParcelaEnMapa()) {
           selectedLocation.nombre = data.ubicacion;
         }
         ultimaActualizacionDb = data.ultima_actualizacion;
         mostrarIndicadorDatosReales();
-        mostrarAvisoDatos(data.advertencia, data.confiable, data.ubicacion_referencia);
-        return data.datos.map(function (dia) {
+        mostrarAvisoDatos(
+          data.advertencia,
+          data.confiable,
+          data.ubicacion_referencia,
+          data.distancia_km
+        );
+        return filas.map(function (dia) {
           return mapApiDay({
             fecha: dia.fecha,
             temperatura_max: dia.temp_max,
@@ -421,12 +483,18 @@
         document.getElementById("forecastTable").style.display = "none";
       }
 
-      function programarActualizacion(delayMs) {
+      function programarActualizacionMapa() {
+        const ahora = Date.now();
+        if (ahora - ultimaPeticionMapa < MAP_MIN_INTERVALO_MS) {
+          mostrarToast("Espere 3 segundos entre selecciones en el mapa", "warning");
+          return;
+        }
         if (refreshTimer) clearTimeout(refreshTimer);
         refreshTimer = setTimeout(function () {
           refreshTimer = null;
+          ultimaPeticionMapa = Date.now();
           refreshDashboard();
-        }, delayMs);
+        }, MAP_CLICK_DEBOUNCE_MS);
       }
 
       function mostrarDatosMARN(data) {
@@ -807,7 +875,7 @@
           selectedPointEl.textContent =
             "Punto seleccionado: " + newLat.toFixed(4) + ", " + newLon.toFixed(4);
           selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT, nombre: null };
-          programarActualizacion(MAP_REFRESH_DEBOUNCE_MS);
+          programarActualizacionMapa();
         }
 
         map.on("click", function (event) {

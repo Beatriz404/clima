@@ -38,6 +38,7 @@ UBICACIONES_SALVADOR: tuple[UbicacionSalvador, ...] = (
 )
 
 NOMBRES_UBICACIONES = {_normalizar_nombre(u.nombre): u for u in UBICACIONES_SALVADOR}
+NOMBRES_CIUDADES_BATCH = {u.nombre for u in UBICACIONES_SALVADOR}
 
 
 def buscar_por_nombre(nombre: str) -> UbicacionSalvador | None:
@@ -84,22 +85,40 @@ def ubicacion_desde_coordenadas(
     )
 
 
-def ubicacion_mas_cercana(latitud: float, longitud: float) -> UbicacionSalvador:
+def calcular_distancia_km(latitud_a: float, longitud_a: float, latitud_b: float, longitud_b: float) -> float:
+    """Distancia haversine en kilómetros."""
     import math
 
+    radio_tierra_km = 6371.0
+    dlat = math.radians(latitud_b - latitud_a)
+    dlon = math.radians(longitud_b - longitud_a)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(latitud_a))
+        * math.cos(math.radians(latitud_b))
+        * math.sin(dlon / 2) ** 2
+    )
+    return radio_tierra_km * 2 * math.asin(math.sqrt(a))
+
+
+def ubicacion_mas_cercana_con_distancia(
+    latitud: float,
+    longitud: float,
+) -> tuple[UbicacionSalvador, float]:
     mejor = UBICACIONES_SALVADOR[0]
     mejor_dist = float("inf")
     for ubicacion in UBICACIONES_SALVADOR:
-        dlat = math.radians(ubicacion.latitud - latitud)
-        dlon = math.radians(ubicacion.longitud - longitud)
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(math.radians(latitud))
-            * math.cos(math.radians(ubicacion.latitud))
-            * math.sin(dlon / 2) ** 2
-        )
-        dist = 2 * math.asin(math.sqrt(a))
+        dist = calcular_distancia_km(latitud, longitud, ubicacion.latitud, ubicacion.longitud)
         if dist < mejor_dist:
             mejor_dist = dist
             mejor = ubicacion
-    return mejor
+    return mejor, mejor_dist
+
+
+def ubicacion_mas_cercana(latitud: float, longitud: float) -> UbicacionSalvador:
+    ciudad, _ = ubicacion_mas_cercana_con_distancia(latitud, longitud)
+    return ciudad
+
+
+def es_ciudad_batch(ubicacion: UbicacionSalvador) -> bool:
+    return ubicacion.nombre in NOMBRES_CIUDADES_BATCH

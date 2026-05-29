@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import (
     UbicacionSalvador,
+    es_ciudad_batch,
     ubicacion_desde_coordenadas,
-    ubicacion_mas_cercana,
+    ubicacion_mas_cercana_con_distancia,
 )
-from app.esquemas import DatoPronosticoSiembra, RespuestaPronosticoApi
+from app.esquemas import DatoPronosticoSiembra, RespuestaPronosticoApi, RespuestaPronosticoParcela
 from app.services.open_meteo import LimiteOpenMeteoError, obtener_pronostico, obtener_pronostico_siembra
 from app.services.pronostico_repositorio import (
     FUENTE_OPEN_METEO,
@@ -26,7 +27,10 @@ ORIGEN_CIUDAD_REFERENCIA = "ciudad_referencia_batch"
 
 
 def _es_parcela(ubicacion: UbicacionSalvador) -> bool:
-    return ubicacion.nombre.startswith("Parcela (")
+    """Parcela del mapa: nunca consultar Open-Meteo en vivo (solo ciudad del batch)."""
+    if ubicacion.nombre.startswith("Parcela ("):
+        return True
+    return not es_ciudad_batch(ubicacion)
 
 
 def _validar_registro_real(registro: dict) -> bool:
@@ -125,7 +129,7 @@ async def _pronostico_parcela_desde_ciudad(
     parcela: UbicacionSalvador,
     dias: int,
 ) -> RespuestaPronosticoApi:
-    ciudad = ubicacion_mas_cercana(parcela.latitud, parcela.longitud)
+    ciudad, distancia_km = ubicacion_mas_cercana_con_distancia(parcela.latitud, parcela.longitud)
     filas, ultima = obtener_pronostico_db(sesion, ciudad, dias)
     cfg = obtener_ajustes()
     if len(filas) < dias:
@@ -136,15 +140,11 @@ async def _pronostico_parcela_desde_ciudad(
     obsoleto = _cache_obsoleto(ultima)
     origen = ORIGEN_CIUDAD_REFERENCIA if not obsoleto else ORIGEN_CACHE_OBSOLETO
     advertencia = (
-        f"Pronóstico de referencia desde {ciudad.nombre} "
-        f"(ciudad más cercana a su parcela; datos Open-Meteo actualizados cada "
-        f"{cfg.batch_intervalo_minutos} min)."
+        f"Datos basados en {ciudad.nombre} (a {distancia_km:.1f} km de su parcela). "
+        f"Open-Meteo actualizado cada {cfg.batch_intervalo_minutos} min por el sistema batch."
     )
     if obsoleto and ultima:
-        advertencia += (
-            f" Última actualización: {ultima.isoformat()}. "
-            "Se muestran los últimos datos disponibles."
-        )
+        advertencia += " Mostrando la última lectura guardada."
     return _construir_respuesta(
         parcela,
         filas,
@@ -152,6 +152,39 @@ async def _pronostico_parcela_desde_ciudad(
         origen,
         ubicacion_referencia=ciudad.nombre,
         advertencia=advertencia,
+    )
+
+
+async def obtener_pronostico_parcela(
+    sesion: Session,
+    latitud: float,
+    longitud: float,
+    altitud: float,
+    dias: int,
+) -> RespuestaPronosticoParcela:
+    """Solo SQLite: pronóstico batch de la ciudad más cercana (sin Open-Meteo en vivo)."""
+    parcela = ubicacion_desde_coordenadas(latitud, longitud, altitud)
+    base = await _pronostico_parcela_desde_ciudad(sesion, parcela, dias)
+    ciudad, distancia_km = ubicacion_mas_cercana_con_distancia(parcela.latitud, parcela.longitud)
+    advertencia = base.advertencia or (
+        f"Datos basados en {ciudad.nombre} (a {distancia_km:.1f} km)"
+    )
+    return RespuestaPronosticoParcela(
+        latitud=parcela.latitud,
+        longitud=parcela.longitud,
+        altitud=parcela.altitud,
+        ubicacion=parcela.nombre,
+        region=parcela.region,
+        ubicacion_referencia=ciudad.nombre,
+        distancia_km=round(distancia_km, 1),
+        advertencia=advertencia,
+        ultima_actualizacion=base.ultima_actualizacion,
+        fuente=base.fuente,
+        datos_reales=base.datos_reales,
+        confiable=base.confiable,
+        origen=base.origen,
+        dias=base.dias,
+        pronostico=base.datos,
     )
 
 
@@ -166,10 +199,10 @@ async def obtener_pronostico_garantizado(
     Producción (pronostico_solo_batch): solo lectura desde BD del batch;
     parcelas usan la ciudad más cercana pre-calculada.
   """
-    cfg = obtener_ajustes()
-    if cfg.pronostico_solo_batch and _es_parcela(ubicacion):
+    if _es_parcela(ubicacion):
         return await _pronostico_parcela_desde_ciudad(sesion, ubicacion, dias)
 
+    cfg = obtener_ajustes()
     filas, ultima = obtener_pronostico_db(sesion, ubicacion, dias)
     origen = ORIGEN_CACHE
     advertencia: str | None = None
@@ -238,9 +271,9 @@ async def obtener_pronostico_para_api(
     Con pronostico_solo_batch=True solo lee BD (vía obtener_pronostico_garantizado).
     En desarrollo puede consultar Open-Meteo en vivo a través del proxy.
     """
+    ubicacion = ubicacion_desde_coordenadas(latitud, longitud, altitud)
     cfg = obtener_ajustes()
-    if cfg.pronostico_solo_batch:
-        ubicacion = ubicacion_desde_coordenadas(latitud, longitud, altitud)
+    if _es_parcela(ubicacion) or cfg.pronostico_solo_batch:
         respuesta = await obtener_pronostico_garantizado(sesion, ubicacion, dias)
         return [
             {

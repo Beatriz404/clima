@@ -38,9 +38,54 @@ def test_api_sistema_estado(cliente):
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert datos["ubicaciones_batch"] == 14
-    assert "pronostico_solo_batch" in datos
-    assert "proxy_cache" in datos
+    assert datos["modo_batch"] == datos["pronostico_solo_batch"]
+    assert "cache_proxy" in datos
     assert datos["nota"]
+
+
+def test_api_pronostico_parcela_sin_open_meteo(cliente, monkeypatch):
+    from app.base_datos import SesionLocal
+    from app.configuracion import obtener_ajustes
+
+    async def _no_debe_llamar(*_args, **_kwargs):
+        raise AssertionError("Parcela no debe consultar Open-Meteo en vivo")
+
+    monkeypatch.setattr(
+        "app.services.pronostico_servicio.obtener_pronostico_siembra",
+        _no_debe_llamar,
+    )
+    obtener_ajustes.cache_clear()
+
+    ciudad = buscar_por_nombre("San Salvador")
+    registros = [
+        {
+            "fecha": date.today() + timedelta(days=i),
+            "temp_max": 30.0,
+            "temp_min": 20.0,
+            "lluvia_mm": 1.0,
+            "humedad": 60,
+            "velocidad_viento": 5.0,
+        }
+        for i in range(7)
+    ]
+    sesion = SesionLocal()
+    try:
+        guardar_pronosticos_ubicacion(sesion, ciudad, registros)
+    finally:
+        sesion.close()
+
+    respuesta = cliente.get(
+        "/api/pronostico/parcela",
+        params={"lat": 13.71, "lng": -89.20, "altitud": 640, "dias": 7},
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    datos = respuesta.json()
+    assert datos["origen"] in ("ciudad_referencia_batch", "base_datos_obsoleta")
+    assert datos["ubicacion_referencia"] == "San Salvador"
+    assert datos["distancia_km"] >= 0
+    assert "Datos basados en" in datos["advertencia"]
+    assert len(datos["pronostico"]) >= 1
+    obtener_ajustes.cache_clear()
 
 
 def test_api_ubicaciones(cliente):
@@ -80,6 +125,49 @@ def test_api_pronostico_desde_db(cliente):
     assert datos["datos_reales"] is True
     assert len(datos["datos"]) >= 1
     assert datos["datos"][0]["temp_max"] == 32.0
+
+
+def test_parcela_siempre_ciudad_batch_aun_sin_solo_batch(cliente, monkeypatch):
+    from app.base_datos import SesionLocal
+    from app.configuracion import obtener_ajustes
+
+    obtener_ajustes.cache_clear()
+    monkeypatch.setenv("PRONOSTICO_SOLO_BATCH", "false")
+    obtener_ajustes.cache_clear()
+
+    async def _no_debe_llamar(*_args, **_kwargs):
+        raise AssertionError("Parcela no debe consultar Open-Meteo aunque solo_batch=false")
+
+    monkeypatch.setattr(
+        "app.services.pronostico_servicio.obtener_pronostico_siembra",
+        _no_debe_llamar,
+    )
+
+    ciudad = buscar_por_nombre("San Salvador")
+    registros = [
+        {
+            "fecha": date.today() + timedelta(days=i),
+            "temp_max": 28.0,
+            "temp_min": 18.0,
+            "lluvia_mm": 2.0,
+            "humedad": 55,
+            "velocidad_viento": 6.0,
+        }
+        for i in range(7)
+    ]
+    sesion = SesionLocal()
+    try:
+        guardar_pronosticos_ubicacion(sesion, ciudad, registros)
+    finally:
+        sesion.close()
+
+    respuesta = cliente.get(
+        "/api/pronostico",
+        params={"latitud": 13.71, "longitud": -89.20, "altitud": 640, "dias": 7},
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["origen"] == "ciudad_referencia_batch"
+    obtener_ajustes.cache_clear()
 
 
 def test_api_pronostico_parcela_usa_ciudad_referencia(cliente, monkeypatch):

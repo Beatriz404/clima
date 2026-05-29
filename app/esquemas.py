@@ -178,3 +178,23 @@ class RespuestaPronosticoApi(BaseModel):
     )
     dias: int
     datos: list[DatoPronosticoSiembra]
+
+
+class RespuestaPronosticoParcela(BaseModel):
+    """Pronóstico de parcela en mapa: solo lectura SQLite (ciudad batch más cercana)."""
+
+    latitud: float
+    longitud: float
+    altitud: float
+    ubicacion: str
+    region: str
+    ubicacion_referencia: str
+    distancia_km: float
+    advertencia: str
+    ultima_actualizacion: datetime | None
+    fuente: str = "Open-Meteo"
+    datos_reales: bool = True
+    confiable: bool = True
+    origen: str = "ciudad_referencia_batch"
+    dias: int
+    pronostico: list[DatoPronosticoSiembra]
