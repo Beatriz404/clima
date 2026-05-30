@@ -1,6 +1,5 @@
 """Rutas de pronóstico (parcelas en mapa y monitoreo)."""
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -9,7 +8,6 @@ from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import UBICACIONES_SALVADOR
 from app.esquemas import RespuestaPronosticoParcela
 from app.services.batch_estado import obtener_ultima_ejecucion_batch
-from app.services.open_meteo import LimiteOpenMeteoError
 from app.services.open_meteo_proxy import obtener_proxy
 from app.services.pronostico_servicio import obtener_pronostico_parcela
 
@@ -32,12 +30,7 @@ async def api_pronostico_parcela(
     cfg = obtener_ajustes()
     if not cfg.validate_coordinates(latitud, longitud, altitud):
         raise HTTPException(status_code=422, detail="Coordenadas fuera de El Salvador")
-    try:
-        return await obtener_pronostico_parcela(sesion, latitud, longitud, altitud, dias)
-    except LimiteOpenMeteoError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return await obtener_pronostico_parcela(sesion, latitud, longitud, altitud, dias)
 
 
 @router.get("/sistema/estado")

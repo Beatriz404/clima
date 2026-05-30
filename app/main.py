@@ -32,7 +32,7 @@ from app.esquemas import (
     UbicacionDisponible,
 )
 from app.modelos import PronosticoSiembra, RecomendacionSiembra, RegistroClimatico
-from app.services.batch_pronostico import ejecutar_actualizacion_batch
+from app.services.batch_pronostico import ejecutar_actualizacion_batch, ejecutar_batch_inicial
 from app.data.ubicaciones_salvador import UBICACIONES_SALVADOR
 from app.services.pronostico_servicio import (
     obtener_pronostico_garantizado,
@@ -54,6 +54,7 @@ from app.services.open_meteo import (
     obtener_historico,
 )
 from app.routes.pronostico import router as pronostico_router
+from app.routes.sistema import router as sistema_router
 from app.services.open_meteo_proxy import cerrar_proxy, iniciar_proxy, obtener_proxy
 
 ajustes = obtener_ajustes()
@@ -67,6 +68,7 @@ async def lifespan(app: FastAPI):
     await iniciar_proxy()
     Base.metadata.create_all(bind=engine)
     if ajustes.batch_habilitado:
+        await ejecutar_batch_inicial()
         scheduler.add_job(
             ejecutar_actualizacion_batch,
             "interval",
@@ -76,8 +78,6 @@ async def lifespan(app: FastAPI):
         )
         scheduler.start()
         logger.info("Scheduler batch activo cada %d minutos", ajustes.batch_intervalo_minutos)
-        if ajustes.batch_al_iniciar:
-            await ejecutar_actualizacion_batch()
     yield
     if scheduler.running:
         scheduler.shutdown()
@@ -114,6 +114,7 @@ if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
 
 app.include_router(pronostico_router)
+app.include_router(sistema_router)
 
 
 def _dias_open_meteo(dias_solicitados: int) -> int:

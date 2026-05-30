@@ -270,7 +270,7 @@
         <p class="map-note">
           Arrastre el marcador o haga clic en el mapa para seleccionar otra parcela en El Salvador.
         </p>
-        <p id="selectedPoint" class="map-selection">Punto seleccionado: 13.6929, -89.2182 (San Salvador)</p>
+        <p id="selectedPoint" class="map-selection">Parcela: 13.6929, -89.2182 · referencia batch: San Salvador</p>
       </section>
     </main>
     <div id="mapToast" class="map-toast" role="status" aria-live="polite"></div>
@@ -291,7 +291,8 @@
       let refreshTimer = null;
       let ultimaPeticionMapa = 0;
       let toastTimer = null;
-      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: "San Salvador" };
+      let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: null };
+      let ciudadReferenciaActual = "San Salvador";
       let ultimaActualizacionDb = null;
 
       function mostrarIndicadorDatosReales() {
@@ -312,10 +313,6 @@
           el.className = "map-toast";
           el.textContent = "";
         }, 4000);
-      }
-
-      function esParcelaEnMapa() {
-        return !selectedLocation.nombre || selectedLocation.nombre.indexOf("Parcela (") === 0;
       }
 
       function mostrarAvisoDatos(advertencia, confiable, referencia, distanciaKm) {
@@ -354,7 +351,16 @@
             "Evite hacer clic repetido en el mapa; los datos se guardan en caché unos minutos."
           );
         }
+        if (mensaje.includes("503")) {
+          return "El servidor está iniciando el pronóstico. Espere unos segundos y recargue.";
+        }
         return mensaje;
+      }
+
+      function esperar(ms) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, ms);
+        });
       }
 
       function formatDateHeading(iso) {
@@ -401,42 +407,37 @@
         return alerts.length ? alerts : [{ type: "warn", text: "Sin alertas críticas hoy" }];
       }
 
-      async function obtenerPronosticoReal(lat, lon, alt, dias = 15) {
+      async function obtenerPronosticoReal(lat, lon, alt, dias = 15, intento = 0) {
         const diasParam = String(Math.min(dias, 15));
-        let url;
-        if (esParcelaEnMapa()) {
-          url =
-            "/api/pronostico/parcela?lat=" +
-            encodeURIComponent(lat) +
-            "&lng=" +
-            encodeURIComponent(lon) +
-            "&altitud=" +
-            encodeURIComponent(alt) +
-            "&dias=" +
-            diasParam;
-        } else {
-          const qs = new URLSearchParams({
-            latitud: String(lat),
-            longitud: String(lon),
-            altitud: String(alt),
-            dias: diasParam,
-          });
-          qs.set("ubicacion", selectedLocation.nombre);
-          url = "/api/pronostico?" + qs.toString();
-        }
+        const url =
+          "/api/pronostico/parcela?lat=" +
+          encodeURIComponent(lat) +
+          "&lng=" +
+          encodeURIComponent(lon) +
+          "&altitud=" +
+          encodeURIComponent(alt) +
+          "&dias=" +
+          diasParam;
         const response = await fetch(url);
         if (!response.ok) {
+          if (intento < 2 && (response.status === 503 || response.status >= 500)) {
+            await esperar(2500);
+            return obtenerPronosticoReal(lat, lon, alt, dias, intento + 1);
+          }
           const detalle = await response.text();
           throw new Error("HTTP " + response.status + ": " + detalle);
         }
         const data = await response.json();
-        const filas = data.pronostico || data.datos;
+        const filas = data.pronostico || data.datos || [];
+        if (!filas.length && intento < 2) {
+          await esperar(2500);
+          return obtenerPronosticoReal(lat, lon, alt, dias, intento + 1);
+        }
         selectedLocation.lat = data.latitud;
         selectedLocation.lon = data.longitud;
-        if (data.ubicacion && data.ubicacion.indexOf("Parcela (") === 0) {
-          selectedLocation.nombre = null;
-        } else if (data.ubicacion && !esParcelaEnMapa()) {
-          selectedLocation.nombre = data.ubicacion;
+        selectedLocation.nombre = null;
+        if (data.ubicacion_referencia) {
+          ciudadReferenciaActual = data.ubicacion_referencia;
         }
         ultimaActualizacionDb = data.ultima_actualizacion;
         mostrarIndicadorDatosReales();
@@ -826,6 +827,17 @@
           document.getElementById("todayLoading").style.display = "none";
           document.getElementById("forecastTable").style.display = "table";
           document.getElementById("forecastLoading").style.display = "none";
+          const punto = document.getElementById("selectedPoint");
+          if (punto && ciudadReferenciaActual) {
+            punto.textContent =
+              "Parcela: " +
+              selectedLocation.lat.toFixed(4) +
+              ", " +
+              selectedLocation.lon.toFixed(4) +
+              " · datos reales (ref. " +
+              ciudadReferenciaActual +
+              ")";
+          }
         } catch (error) {
           mostrarErrorPronostico(error.message);
         } finally {
@@ -873,7 +885,12 @@
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           selectedPointEl.textContent =
-            "Punto seleccionado: " + newLat.toFixed(4) + ", " + newLon.toFixed(4);
+            "Parcela: " +
+            newLat.toFixed(4) +
+            ", " +
+            newLon.toFixed(4) +
+            " · referencia batch: " +
+            ciudadReferenciaActual;
           selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT, nombre: null };
           programarActualizacionMapa();
         }

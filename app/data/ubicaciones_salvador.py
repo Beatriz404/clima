@@ -120,5 +120,16 @@ def ubicacion_mas_cercana(latitud: float, longitud: float) -> UbicacionSalvador:
     return ciudad
 
 
+def ubicaciones_ordenadas_por_distancia(
+    latitud: float,
+    longitud: float,
+) -> list[tuple[UbicacionSalvador, float]]:
+    distancias = [
+        (ubicacion, calcular_distancia_km(latitud, longitud, ubicacion.latitud, ubicacion.longitud))
+        for ubicacion in UBICACIONES_SALVADOR
+    ]
+    return sorted(distancias, key=lambda par: par[1])
+
+
 def es_ciudad_batch(ubicacion: UbicacionSalvador) -> bool:
     return ubicacion.nombre in NOMBRES_CIUDADES_BATCH

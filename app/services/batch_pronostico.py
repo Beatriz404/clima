@@ -18,6 +18,11 @@ PAUSA_TRAS_429_SEG = 12
 DIAS_PRONOSTICO = 15
 
 
+async def actualizar_ubicacion_en_batch(ubicacion) -> bool:
+    """Actualiza una ciudad del batch desde Open-Meteo (uso interno / relleno bajo demanda)."""
+    return await _actualizar_ubicacion(ubicacion)
+
+
 async def _actualizar_ubicacion(ubicacion) -> bool:
     for intento in range(1, REINTENTOS + 1):
         try:
@@ -88,14 +93,34 @@ async def ejecutar_actualizacion_batch() -> dict:
         await asyncio.sleep(PAUSA_ENTRE_UBICACIONES_SEG)
 
     fin = datetime.utcnow()
+    total = len(UBICACIONES_SALVADOR)
     resumen = {
         "inicio": inicio.isoformat(),
         "fin": fin.isoformat(),
         "duracion_segundos": (fin - inicio).total_seconds(),
         "ubicaciones_exitosas": exitosas,
         "ubicaciones_fallidas": fallidas,
-        "total_ubicaciones": len(UBICACIONES_SALVADOR),
+        "total_ubicaciones": total,
+        "exitosas": exitosas,
+        "fallidas": fallidas,
+        "total": total,
     }
     logger.info("[%s] Batch finalizado: %s", fin.isoformat(), resumen)
     registrar_ejecucion_batch(resumen)
     return resumen
+
+
+async def ejecutar_batch_inicial() -> dict | None:
+    """Batch al arrancar la app; no interrumpe el servicio si falla."""
+    try:
+        logger.info("Ejecutando batch inicial de pronósticos...")
+        resultado = await ejecutar_actualizacion_batch()
+        logger.info(
+            "Batch inicial completado: %d/%d ubicaciones",
+            resultado["exitosas"],
+            resultado["total"],
+        )
+        return resultado
+    except Exception as exc:
+        logger.exception("Error en batch inicial (la aplicación continúa): %s", exc)
+        return None

@@ -60,8 +60,8 @@ class AjustesAplicacion(BaseSettings):
         description="Si el cache supera esta edad, se refresca desde Open-Meteo al consultar",
     )
     pronostico_solo_batch: bool = Field(
-        default=False,
-        description="En true, las peticiones de usuario no llaman Open-Meteo (solo el batch)",
+        default=True,
+        description="Usuarios solo leen SQLite; Open-Meteo lo usa el batch o relleno puntual",
     )
     coordenadas_redondeo_grados: float = Field(
         default=0.02,

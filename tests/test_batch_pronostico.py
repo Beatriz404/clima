@@ -43,6 +43,60 @@ def test_api_sistema_estado(cliente):
     assert datos["nota"]
 
 
+def test_api_pronostico_parcela_rellena_desde_batch(cliente, monkeypatch):
+    """Sin datos en BD: intenta rellenar ciudad y responde 200 (sin 503)."""
+
+    from datetime import date
+
+    ciudad = buscar_por_nombre("San Francisco Gotera")
+
+    async def _rellenar(_ciudad):
+        if _ciudad.nombre != ciudad.nombre:
+            return False
+        sesion = __import__("app.base_datos", fromlist=["SesionLocal"]).SesionLocal()
+        try:
+            guardar_pronosticos_ubicacion(
+                sesion,
+                ciudad,
+                [
+                    {
+                        "fecha": date.today(),
+                        "temp_max": 29.0,
+                        "temp_min": 19.0,
+                        "lluvia_mm": 3.0,
+                        "humedad": 68,
+                        "velocidad_viento": 9.0,
+                    }
+                ],
+            )
+        finally:
+            sesion.close()
+        return True
+
+    monkeypatch.setattr(
+        "app.services.pronostico_servicio.actualizar_ubicacion_en_batch",
+        _rellenar,
+    )
+
+    respuesta = cliente.get(
+        "/api/pronostico/parcela",
+        params={"lat": 13.71, "lng": -88.15, "dias": 1},
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    datos = respuesta.json()
+    assert datos["datos_reales"] is True
+    assert len(datos["pronostico"]) >= 1
+    assert datos["ubicacion_referencia"] == "San Francisco Gotera"
+
+
+def test_api_batch_estado(cliente):
+    respuesta = cliente.get("/api/batch/estado")
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert "batch_inicializado" in datos
+    assert datos["ubicaciones_configuradas"] == 14
+
+
 def test_api_pronostico_parcela_sin_open_meteo(cliente, monkeypatch):
     from app.base_datos import SesionLocal
     from app.configuracion import obtener_ajustes

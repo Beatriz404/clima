@@ -79,3 +79,43 @@ def obtener_pronostico_db(
     )
     ultima_actualizacion = ultima[0] if ultima else None
     return filas, ultima_actualizacion
+
+
+def obtener_pronostico_db_reciente(
+    sesion: Session,
+    ubicacion: UbicacionSalvador,
+    dias: int,
+) -> tuple[list[PronosticoSiembra], datetime | None]:
+    """Últimos días guardados en batch (aunque la fecha ya haya pasado)."""
+    filas = (
+        sesion.query(PronosticoSiembra)
+        .filter_by(ubicacion_nombre=ubicacion.nombre)
+        .order_by(desc(PronosticoSiembra.fecha_pronostico))
+        .limit(dias)
+        .all()
+    )
+    filas = list(reversed(filas))
+    ultima = (
+        sesion.query(PronosticoSiembra.updated_at)
+        .filter_by(ubicacion_nombre=ubicacion.nombre)
+        .order_by(desc(PronosticoSiembra.updated_at))
+        .first()
+    )
+    ultima_actualizacion = ultima[0] if ultima else None
+    return filas, ultima_actualizacion
+
+
+def obtener_ultima_actualizacion_batch(sesion: Session) -> datetime | None:
+    """Última vez que cualquier ciudad del batch fue actualizada."""
+    ultima = sesion.query(PronosticoSiembra.updated_at).order_by(desc(PronosticoSiembra.updated_at)).first()
+    return ultima[0] if ultima else None
+
+
+def batch_tiene_datos(sesion: Session, dias_minimos: int = 1) -> bool:
+    hoy = date.today()
+    cuenta = (
+        sesion.query(PronosticoSiembra)
+        .filter(PronosticoSiembra.fecha_pronostico >= hoy)
+        .count()
+    )
+    return cuenta >= dias_minimos
