@@ -87,6 +87,7 @@ def test_api_pronostico_parcela_rellena_desde_batch(cliente, monkeypatch):
     assert datos["datos_reales"] is True
     assert len(datos["pronostico"]) >= 1
     assert datos["ubicacion_referencia"] == "San Francisco Gotera"
+    assert "San Francisco Gotera" in datos["resumen"]
 
 
 def test_api_batch_estado(cliente):
@@ -137,7 +138,8 @@ def test_api_pronostico_parcela_sin_open_meteo(cliente, monkeypatch):
     assert datos["origen"] in ("ciudad_referencia_batch", "base_datos_obsoleta")
     assert datos["ubicacion_referencia"] == "San Salvador"
     assert datos["distancia_km"] >= 0
-    assert "Datos basados en" in datos["advertencia"]
+    assert "resumen" in datos
+    assert "San Salvador" in datos["resumen"]
     assert len(datos["pronostico"]) >= 1
     obtener_ajustes.cache_clear()
 
@@ -259,7 +261,7 @@ def test_api_pronostico_parcela_usa_ciudad_referencia(cliente, monkeypatch):
     assert datos["origen"] == "ciudad_referencia_batch"
     assert datos["ubicacion_referencia"] == "San Salvador"
     assert datos["confiable"] is True
-    assert datos["advertencia"]
+    assert "Morazán" in datos["resumen"] or "San Francisco Gotera" in datos["resumen"]
     obtener_ajustes.cache_clear()
 
 

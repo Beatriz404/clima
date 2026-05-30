@@ -210,7 +210,7 @@
 
       <section class="card today">
         <div class="today-title">
-          <h2 id="todayTitle">Hoy</h2>
+          <h2 id="todayTitle"></h2>
           <span id="todayBadge" class="badge">Cargando...</span>
         </div>
         <div id="todayLoading" class="loading">Cargando datos del día...</div>
@@ -270,7 +270,7 @@
         <p class="map-note">
           Arrastre el marcador o haga clic en el mapa para seleccionar otra parcela en El Salvador.
         </p>
-        <p id="selectedPoint" class="map-selection">Parcela: 13.6929, -89.2182 · referencia batch: San Salvador</p>
+        <p id="selectedPoint" class="map-selection">Parcela: 13.6929, -89.2182</p>
       </section>
     </main>
     <div id="mapToast" class="map-toast" role="status" aria-live="polite"></div>
@@ -283,6 +283,18 @@
       const BASE_ALT = 650;
       const MAP_CLICK_DEBOUNCE_MS = 500;
       const MAP_MIN_INTERVALO_MS = 3000;
+      const ZONA_HORARIA = "America/El_Salvador";
+
+      function fechaHoyIso() {
+        return new Date().toLocaleDateString("en-CA", { timeZone: ZONA_HORARIA });
+      }
+
+      function filtrarPronosticoDesdeHoy(filas) {
+        const hoy = fechaHoyIso();
+        return filas.filter(function (dia) {
+          return dia.date >= hoy;
+        });
+      }
 
       let forecastData = [];
       let visibleDays = 7;
@@ -292,8 +304,8 @@
       let ultimaPeticionMapa = 0;
       let toastTimer = null;
       let selectedLocation = { lat: BASE_LAT, lon: BASE_LON, alt: BASE_ALT, nombre: null };
-      let ciudadReferenciaActual = "San Salvador";
       let ultimaActualizacionDb = null;
+      let ultimaRespuestaPronostico = null;
 
       function mostrarIndicadorDatosReales() {
         const meta = document.querySelector(".header .marn-meta");
@@ -315,7 +327,26 @@
         }, 4000);
       }
 
-      function mostrarAvisoDatos(advertencia, confiable, referencia, distanciaKm) {
+      function actualizarTextoUbicacion(data) {
+        const punto = document.getElementById("selectedPoint");
+        const calc = document.getElementById("calcLocation");
+        if (!data || !data.resumen) return;
+        if (punto) punto.textContent = data.resumen;
+        if (calc) {
+          let texto = "Calculado para: " + data.resumen;
+          if (ultimaActualizacionDb) {
+            texto +=
+              " · Actualizado " +
+              new Date(ultimaActualizacionDb).toLocaleString("es-SV", {
+                dateStyle: "short",
+                timeStyle: "short",
+              });
+          }
+          calc.textContent = texto;
+        }
+      }
+
+      function mostrarAvisoDatos(advertencia) {
         let el = document.getElementById("dataNotice");
         if (!el) {
           const header = document.querySelector(".header");
@@ -324,20 +355,11 @@
           el.className = "data-notice";
           header.appendChild(el);
         }
-        if (!advertencia && confiable !== false) {
+        const texto = (advertencia || "").trim();
+        if (!texto) {
           el.style.display = "none";
+          el.textContent = "";
           return;
-        }
-        let texto = advertencia || "Datos en revisión.";
-        if (referencia) {
-          texto += " Referencia: " + referencia;
-          if (distanciaKm != null) {
-            texto += " (a " + Number(distanciaKm).toFixed(1) + " km)";
-          }
-          texto += ".";
-        }
-        if (confiable === false) {
-          texto += " Revise antes de decidir siembra.";
         }
         el.style.display = "block";
         el.textContent = texto;
@@ -436,26 +458,27 @@
         selectedLocation.lat = data.latitud;
         selectedLocation.lon = data.longitud;
         selectedLocation.nombre = null;
-        if (data.ubicacion_referencia) {
-          ciudadReferenciaActual = data.ubicacion_referencia;
-        }
         ultimaActualizacionDb = data.ultima_actualizacion;
+        ultimaRespuestaPronostico = data;
         mostrarIndicadorDatosReales();
-        mostrarAvisoDatos(
-          data.advertencia,
-          data.confiable,
-          data.ubicacion_referencia,
-          data.distancia_km
+        mostrarAvisoDatos(data.advertencia);
+        actualizarTextoUbicacion(data);
+        const diasPronostico = filtrarPronosticoDesdeHoy(
+          filas.map(function (dia) {
+            return mapApiDay({
+              fecha: dia.fecha,
+              temperatura_max: dia.temp_max,
+              temperatura_min: dia.temp_min,
+              lluvia_mm: dia.lluvia_mm,
+              humedad_relativa: dia.humedad,
+            });
+          })
         );
-        return filas.map(function (dia) {
-          return mapApiDay({
-            fecha: dia.fecha,
-            temperatura_max: dia.temp_max,
-            temperatura_min: dia.temp_min,
-            lluvia_mm: dia.lluvia_mm,
-            humedad_relativa: dia.humedad,
-          });
-        });
+        if (!diasPronostico.length && intento < 2) {
+          await esperar(2500);
+          return obtenerPronosticoReal(lat, lon, alt, dias, intento + 1);
+        }
+        return diasPronostico;
       }
 
       async function obtenerMarnReal(lat, lon, alt) {
@@ -592,8 +615,16 @@
 
       function updateTodayCard() {
         if (!forecastData.length) return;
-        const today = forecastData[0];
-        document.getElementById("todayTitle").textContent = "Hoy (" + formatDateHeading(today.date) + ")";
+        const hoyIso = fechaHoyIso();
+        let today = forecastData.find(function (d) {
+          return d.date === hoyIso;
+        });
+        if (!today) today = forecastData[0];
+        const titulo =
+          today.date === hoyIso
+            ? "Hoy (" + formatDateHeading(today.date) + ")"
+            : formatDateHeading(today.date);
+        document.getElementById("todayTitle").textContent = titulo;
         const state = evaluateTrafficLight(today);
         const badge = document.getElementById("todayBadge");
         badge.className = "badge " + state.color;
@@ -806,18 +837,9 @@
             selectedLocation.alt,
             15
           );
-          let textoUbicacion =
-            "Parcela exacta (" +
-            selectedLocation.lat.toFixed(5) +
-            ", " +
-            selectedLocation.lon.toFixed(5) +
-            ", " +
-            Math.round(selectedLocation.alt) +
-            " m)";
-          if (ultimaActualizacionDb) {
-            textoUbicacion += " · Actualizado: " + new Date(ultimaActualizacionDb).toLocaleString("es-SV");
+          if (ultimaRespuestaPronostico) {
+            actualizarTextoUbicacion(ultimaRespuestaPronostico);
           }
-          document.getElementById("calcLocation").textContent = "Calculado para: " + textoUbicacion;
           updateTodayCard();
           renderFocusDay();
           renderSummary();
@@ -827,17 +849,6 @@
           document.getElementById("todayLoading").style.display = "none";
           document.getElementById("forecastTable").style.display = "table";
           document.getElementById("forecastLoading").style.display = "none";
-          const punto = document.getElementById("selectedPoint");
-          if (punto && ciudadReferenciaActual) {
-            punto.textContent =
-              "Parcela: " +
-              selectedLocation.lat.toFixed(4) +
-              ", " +
-              selectedLocation.lon.toFixed(4) +
-              " · datos reales (ref. " +
-              ciudadReferenciaActual +
-              ")";
-          }
         } catch (error) {
           mostrarErrorPronostico(error.message);
         } finally {
@@ -885,12 +896,11 @@
           marker.setLatLng([newLat, newLon]);
           areaCircle.setLatLng([newLat, newLon]);
           selectedPointEl.textContent =
-            "Parcela: " +
+            "Parcela " +
             newLat.toFixed(4) +
             ", " +
             newLon.toFixed(4) +
-            " · referencia batch: " +
-            ciudadReferenciaActual;
+            " — cargando pronóstico…";
           selectedLocation = { lat: newLat, lon: newLon, alt: BASE_ALT, nombre: null };
           programarActualizacionMapa();
         }

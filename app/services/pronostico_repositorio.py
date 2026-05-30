@@ -1,12 +1,20 @@
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import UbicacionSalvador
 from app.modelos import PronosticoSiembra
 
 FUENTE_OPEN_METEO = "Open-Meteo"
+
+
+def hoy_territorio() -> date:
+    """Fecha calendario en El Salvador (no UTC del servidor)."""
+    tz = ZoneInfo(obtener_ajustes().zona_horaria)
+    return datetime.now(tz).date()
 
 
 def guardar_pronosticos_ubicacion(
@@ -15,6 +23,11 @@ def guardar_pronosticos_ubicacion(
     registros: list[dict],
 ) -> int:
     ahora = datetime.utcnow()
+    hoy = hoy_territorio()
+    sesion.query(PronosticoSiembra).filter(
+        PronosticoSiembra.ubicacion_nombre == ubicacion.nombre,
+        PronosticoSiembra.fecha_pronostico < hoy,
+    ).delete(synchronize_session=False)
     guardados = 0
     for registro in registros:
         fecha: date = registro["fecha"]
@@ -60,7 +73,7 @@ def obtener_pronostico_db(
     ubicacion: UbicacionSalvador,
     dias: int,
 ) -> tuple[list[PronosticoSiembra], datetime | None]:
-    hoy = date.today()
+    hoy = hoy_territorio()
     filas = (
         sesion.query(PronosticoSiembra)
         .filter(
@@ -86,15 +99,18 @@ def obtener_pronostico_db_reciente(
     ubicacion: UbicacionSalvador,
     dias: int,
 ) -> tuple[list[PronosticoSiembra], datetime | None]:
-    """Últimos días guardados en batch (aunque la fecha ya haya pasado)."""
+    """Días futuros guardados (misma regla que obtener_pronostico_db)."""
+    hoy = hoy_territorio()
     filas = (
         sesion.query(PronosticoSiembra)
-        .filter_by(ubicacion_nombre=ubicacion.nombre)
-        .order_by(desc(PronosticoSiembra.fecha_pronostico))
+        .filter(
+            PronosticoSiembra.ubicacion_nombre == ubicacion.nombre,
+            PronosticoSiembra.fecha_pronostico >= hoy,
+        )
+        .order_by(PronosticoSiembra.fecha_pronostico)
         .limit(dias)
         .all()
     )
-    filas = list(reversed(filas))
     ultima = (
         sesion.query(PronosticoSiembra.updated_at)
         .filter_by(ubicacion_nombre=ubicacion.nombre)
@@ -112,7 +128,7 @@ def obtener_ultima_actualizacion_batch(sesion: Session) -> datetime | None:
 
 
 def batch_tiene_datos(sesion: Session, dias_minimos: int = 1) -> bool:
-    hoy = date.today()
+    hoy = hoy_territorio()
     cuenta = (
         sesion.query(PronosticoSiembra)
         .filter(PronosticoSiembra.fecha_pronostico >= hoy)

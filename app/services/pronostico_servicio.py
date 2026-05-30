@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.configuracion import obtener_ajustes
 from app.data.ubicaciones_salvador import (
     UbicacionSalvador,
+    buscar_por_nombre,
     es_ciudad_batch,
     ubicacion_desde_coordenadas,
     ubicacion_mas_cercana_con_distancia,
@@ -13,11 +14,7 @@ from app.data.ubicaciones_salvador import (
 )
 from app.esquemas import DatoPronosticoSiembra, RespuestaPronosticoApi, RespuestaPronosticoParcela
 from app.services.batch_pronostico import actualizar_ubicacion_en_batch
-from app.services.pronostico_repositorio import (
-    FUENTE_OPEN_METEO,
-    obtener_pronostico_db,
-    obtener_pronostico_db_reciente,
-)
+from app.services.pronostico_repositorio import FUENTE_OPEN_METEO, hoy_territorio, obtener_pronostico_db
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +43,8 @@ def _leer_filas_batch(
     ciudad: UbicacionSalvador,
     dias: int,
 ) -> tuple[list, datetime | None]:
-    filas, ultima = obtener_pronostico_db(sesion, ciudad, dias)
-    if len(filas) < dias:
-        recientes, ultima_reciente = obtener_pronostico_db_reciente(sesion, ciudad, dias)
-        if len(recientes) > len(filas):
-            filas, ultima = recientes, ultima_reciente
-    return filas, ultima
+    """Solo fechas desde hoy (El Salvador); no reutiliza días pasados obsoletos."""
+    return obtener_pronostico_db(sesion, ciudad, dias)
 
 
 async def _rellenar_ciudad_desde_open_meteo(ciudad: UbicacionSalvador) -> bool:
@@ -115,7 +108,7 @@ def _construir_respuesta(
         for f in filas
     ]
     if confiable is None:
-        confiable = bool(filas) and origen in (ORIGEN_CACHE, ORIGEN_CIUDAD_REFERENCIA) and not _cache_obsoleto(ultima)
+        confiable = bool(filas)
     return RespuestaPronosticoApi(
         ubicacion=ubicacion.nombre,
         latitud=ubicacion.latitud,
@@ -142,7 +135,8 @@ def _respuesta_desde_filas(
     *,
     distancia_km: float | None = None,
 ) -> RespuestaPronosticoApi:
-    cfg = obtener_ajustes()
+    hoy = hoy_territorio()
+    filas = [f for f in filas if f.fecha_pronostico >= hoy]
     obsoleto = _cache_obsoleto(ultima)
     es_referencia = ciudad.nombre != ubicacion.nombre or distancia_km is not None
 
@@ -151,17 +145,10 @@ def _respuesta_desde_filas(
         origen = ORIGEN_CACHE_OBSOLETO
 
     advertencia = None
-    if es_referencia and distancia_km is not None:
-        advertencia = (
-            f"Datos reales de {ciudad.nombre} (a {distancia_km:.1f} km de su parcela). "
-            f"Actualización automática cada {cfg.batch_intervalo_minutos} min."
-        )
+    if not filas:
+        advertencia = "Pronóstico en actualización; recargue la página en unos minutos."
     elif len(filas) < dias:
-        advertencia = (
-            f"Mostrando {len(filas)} de {dias} días disponibles para {ciudad.nombre}."
-        )
-    if obsoleto and ultima:
-        advertencia = (advertencia or "") + " Última lectura guardada en base de datos."
+        advertencia = f"Solo hay {len(filas)} de {dias} días de pronóstico disponibles."
 
     return _construir_respuesta(
         ubicacion,
@@ -184,23 +171,36 @@ async def _pronostico_parcela_desde_ciudad(
     return _respuesta_desde_filas(parcela, ciudad, filas, ultima, dias, distancia_km=distancia_km)
 
 
+def _resumen_parcela(
+    parcela: UbicacionSalvador,
+    ciudad: UbicacionSalvador,
+    distancia_km: float,
+) -> str:
+    return (
+        f"Parcela {parcela.latitud:.4f}, {parcela.longitud:.4f} "
+        f"({parcela.altitud:.0f} m) · Pronóstico: {ciudad.nombre}, {ciudad.region} "
+        f"({distancia_km:.1f} km)"
+    )
+
+
 def _respuesta_parcela_desde_api(
     parcela: UbicacionSalvador,
     base: RespuestaPronosticoApi,
-    ciudad_nombre: str,
+    ciudad: UbicacionSalvador,
     distancia_km: float,
 ) -> RespuestaPronosticoParcela:
-    advertencia = base.advertencia or (
-        f"Datos reales de {ciudad_nombre} (a {distancia_km:.1f} km)"
-    )
+    advertencia = base.advertencia
+    dist = round(distancia_km, 1)
     return RespuestaPronosticoParcela(
         latitud=parcela.latitud,
         longitud=parcela.longitud,
         altitud=parcela.altitud,
         ubicacion=parcela.nombre,
         region=parcela.region,
-        ubicacion_referencia=ciudad_nombre,
-        distancia_km=round(distancia_km, 1),
+        ubicacion_referencia=ciudad.nombre,
+        region_referencia=ciudad.region,
+        distancia_km=dist,
+        resumen=_resumen_parcela(parcela, ciudad, dist),
         advertencia=advertencia,
         ultima_actualizacion=base.ultima_actualizacion,
         fuente=base.fuente,
@@ -222,14 +222,16 @@ async def obtener_pronostico_parcela(
     parcela = ubicacion_desde_coordenadas(latitud, longitud, altitud)
     base = await _pronostico_parcela_desde_ciudad(sesion, parcela, dias)
     ciudad, distancia_km = ubicacion_mas_cercana_con_distancia(parcela.latitud, parcela.longitud)
-    ref = base.ubicacion_referencia or ciudad.nombre
+    ref_nombre = base.ubicacion_referencia or ciudad.nombre
+    ciudad_ref = buscar_por_nombre(ref_nombre) or ciudad
     dist = distancia_km
-    if base.ubicacion_referencia and base.ubicacion_referencia != ciudad.nombre:
+    if ref_nombre != ciudad.nombre:
         for c, d in ubicaciones_ordenadas_por_distancia(parcela.latitud, parcela.longitud):
-            if c.nombre == base.ubicacion_referencia:
+            if c.nombre == ref_nombre:
+                ciudad_ref = c
                 dist = d
                 break
-    return _respuesta_parcela_desde_api(parcela, base, ref, dist)
+    return _respuesta_parcela_desde_api(parcela, base, ciudad_ref, dist)
 
 
 async def obtener_pronostico_garantizado(

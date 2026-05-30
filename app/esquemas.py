@@ -189,8 +189,10 @@ class RespuestaPronosticoParcela(BaseModel):
     ubicacion: str
     region: str
     ubicacion_referencia: str
+    region_referencia: str = Field(description="Departamento/zona de la ciudad batch usada")
     distancia_km: float
-    advertencia: str
+    resumen: str = Field(description="Línea corta: parcela y ciudad de referencia del pronóstico")
+    advertencia: str | None = None
     ultima_actualizacion: datetime | None
     fuente: str = "Open-Meteo"
     datos_reales: bool = True
